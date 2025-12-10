@@ -8,10 +8,10 @@ $CONEXION = [
         "db" => "synertech_etiquetas"
     ],
     "produccion" => [
-        "host" => "localhost",
+        "host" => "185.214.132.2",
         "port" => "3306",
-        "user" => "",
-        "pass" => "",
-        "db" => ""
+        "user" => "u170727012_etiquetas",
+        "pass" => "Admin305!!",
+        "db" => "u170727012_etiquetas"
     ]
 ];

@@ -298,7 +298,7 @@
     <!-- Información del Usuario -->
     <div class="user-info">
         <div class="d-flex align-items-center">
-            <img src="https://mdbootstrap.com/img/Photos/Avatars/avatar-8.jpg" 
+            <img src="https://etiquetas.ibericaservice.com/img/icon-512x512.png" 
                  class="user-avatar rounded-circle me-3" 
                  alt="Usuario"
                  onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMwZDZlZmQiLz48dGV4dCB4PSIyMCIgeT0iMjIiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5VPC90ZXh0Pjwvc3ZnPg=='">

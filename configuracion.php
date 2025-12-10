@@ -235,7 +235,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                 </div>
                                                 <div class="card-body text-center">
                                                     <div class="mb-3">
-                                                        <img src="https://mdbootstrap.com/img/Photos/Avatars/avatar-8.jpg" 
+                                                        <img src="https://etiquetas.ibericaservice.com/img/icon-512x512.png" 
                                                              class="rounded-circle shadow-4" 
                                                              style="width: 150px; height: 150px; object-fit: cover;" 
                                                              alt="Avatar" id="profileAvatar">
