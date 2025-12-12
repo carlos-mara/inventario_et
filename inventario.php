@@ -384,7 +384,6 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 if (result.exito) {
                     const etiqueta = result.etiqueta.info;
                     
-                    
                     const modalBody = document.getElementById('detalleModalBody');
                     
                     modalBody.innerHTML = `
@@ -404,7 +403,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 <h6 class="fw-bold text-primary">Información de Stock</h6>
                                 <p><strong>Stock Actual:</strong> ${etiqueta.stock_actual} unidades</p>
                                 <p><strong>Stock Mínimo:</strong> ${etiqueta.stock_minimo} unidades</p>
-                                <p><strong>Tamaño:</strong> ${etiqueta.alto} x ${etiqueta.ancho} cm</p>
+                                
                                 <div class="fw-bold text-primary">
                                     <strong>Foto:</strong><br>
                                     <img src="${etiqueta.foto_url ? 'uploads/' + etiqueta.foto_url : 'https://placehold.co/600X400?text=SIN+FOTO&font=roboto'}" 
@@ -419,7 +418,45 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 <p><strong>Actualizado:</strong> ${new Date(etiqueta.fecha_actualizacion).toLocaleDateString()}</p>
                             </div>
                         </div>
+                        
                     `;
+                    let tamanos = result.etiqueta.tamanos
+                    if (tamanos.length > 0) {
+                        let tablaBody = `
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Dimensiones</th>
+                                            <th>Alto (cm)</th>
+                                            <th>Ancho (cm)</th>
+                                            <th>Stock</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                        `;
+                        
+                        tamanos.forEach((tamano, index) => {
+                            const stockClass = tamano.stock > 0 ? 'bg-success' : 'bg-warning';
+                            
+                            tablaBody += `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td><span class="badge bg-primary">${tamano.alto || '0'} × ${tamano.ancho || '0'} cm</span></td>
+                                    <td>${tamano.alto || '0'}</td>
+                                    <td>${tamano.ancho || '0'}</td>
+                                    <td><span class="badge ${stockClass}">${tamano.stock || '0'} unidades</span></td>
+                                </tr>
+                            `;
+                        });
+                        modalBody.innerHTML += tablaBody;
+                        modalBody.innerHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
                     
                     const modal = new mdb.Modal(document.getElementById('detalleModal'));
                     modal.show();

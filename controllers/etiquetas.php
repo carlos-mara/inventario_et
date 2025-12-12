@@ -182,7 +182,8 @@ class EtiquetasControllers extends Etiqueta
                     $tamanos[] = [
                         'idTamano' => $row['idTamano'],
                         'alto' => $row['alto'],
-                        'ancho' => $row['ancho']
+                        'ancho' => $row['ancho'],
+                        'stock' => $row['stock_tamano']
                     ];
                 }
 

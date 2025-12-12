@@ -89,7 +89,7 @@ class Etiqueta {
         try {
             // Aquí podrías agregar la lógica para verificar el token si es necesario
             
-            $sql = "SELECT etiqueta_tamanos.id idTamano, etiquetas.nombre, etiquetas.descripcion, etiqueta_tamanos.alto, etiqueta_tamanos.ancho, stock_minimo, etiquetas.activa as activa,
+            $sql = "SELECT etiqueta_tamanos.id idTamano, etiqueta_tamanos.stock_actual stock_tamano, etiquetas.nombre, etiquetas.descripcion, etiqueta_tamanos.alto, etiqueta_tamanos.ancho, stock_minimo, etiquetas.activa as activa,
                            etiquetas.foto_url, etiquetas.fecha_creacion, categorias.nombre AS categoria_nombre, categorias.id AS categoria_id
                     FROM etiquetas
                     INNER JOIN categorias ON categorias.id = etiquetas.categoria_id
