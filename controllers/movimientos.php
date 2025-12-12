@@ -93,16 +93,21 @@ class MovimientosControllers extends Movimiento
             }
 
             $cantidad_anterior = parent::obtenerCantidadActualTamano($id_tamano);
+            $cantidad_anterior_et = parent::obtenerCantidadActualEt($etiqueta_id);
             if ($tipo === 'entrada') {
                 $cantidad_nueva = $cantidad_anterior + $cantidad;
+                $cantidad_nueva_et = $cantidad_anterior_et + $cantidad;
             } elseif ($tipo === 'salida') {
                 $cantidad_nueva = $cantidad_anterior - $cantidad;
+                $cantidad_nueva_et = $cantidad_anterior_et - $cantidad;
             }
             
             $result = parent::registrarMovimiento($etiqueta_id, $tipo, $cantidad, $alto, $ancho, $precio, $motivo, $referencia, $observaciones, $cantidad_anterior, $cantidad_nueva, $cod_proyecto, $usuario_id, $fecha, $foto_url);
             
             if ($result) {
                 parent::actualizarCantidadEtiquetaTamano($id_tamano, $cantidad_nueva);
+                //se actualiza la cantidad total de la etiqueta (todos sus tamaños)
+                parent::actualizarCantidadEtiqueta($etiqueta_id, $cantidad_nueva_et);
                 
                 // Actualizar cantidad entregada en proyecto_etiquetas si hay proyecto
                 if ($cod_proyecto && $tipo === 'salida') {

@@ -57,10 +57,36 @@ class Movimiento {
             return 0;
         }
     }
+    public function obtenerCantidadActualEt($id) {
+        try {
+            $sql = "SELECT stock_total FROM etiquetas WHERE id = :id";
+            $parametros = [':id' => $id];
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            $fila = $resultado->fetch(PDO::FETCH_ASSOC);
+            return $fila ? (int)$fila['stock_total'] : 0;
+        } catch (Exception $e) {
+            error_log("Error obteniendo cantidad actual: " . $e->getMessage());
+            return 0;
+        }
+    }
 
     public function actualizarCantidadEtiquetaTamano($id, $nueva_cantidad) {
         try {
             $sql = "UPDATE etiqueta_tamanos SET stock_actual = :nueva_cantidad WHERE id = :id";
+            $parametros = [
+                ':nueva_cantidad' => $nueva_cantidad,
+                ':id'    => $id
+            ];
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->rowCount() > 0;
+        } catch (Exception $e) {
+            error_log("Error actualizando cantidad de etiqueta: " . $e->getMessage());
+            return false;
+        }
+    }
+    public function actualizarCantidadEtiqueta($id, $nueva_cantidad) {
+        try {
+            $sql = "UPDATE etiquetas SET stock_total = :nueva_cantidad WHERE id = :id";
             $parametros = [
                 ':nueva_cantidad' => $nueva_cantidad,
                 ':id'    => $id

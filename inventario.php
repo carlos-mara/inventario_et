@@ -205,7 +205,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                     <th></th>
                                                     <th>Nombre</th>
                                                     <th>Categoría</th>
-                                                    <th>Stock</th>
+                                                    <th>Stock Total</th>
                                                     <th>Estado</th>
                                                     <th>Acciones</th>
                                                 </tr>
@@ -302,7 +302,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
 
             etiquetasPagina.forEach(etiqueta => {
                 const tr = document.createElement('tr');
-                tr.className = etiqueta.stock_actual <= 10 ? 'stock-bajo' : 'stock-normal';
+                tr.className = etiqueta.stock_total <= 10 ? 'stock-bajo' : 'stock-normal';
                 
                 tr.innerHTML = `
                     <td>
@@ -315,8 +315,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     </td>
                     <td>${etiqueta.categoria_nombre || 'Sin categoría'}</td>
                     <td>
-                        <span class="badge ${etiqueta.stock_actual === 0 ? 'bg-danger' : etiqueta.stock_actual <= etiqueta.stock_minimo ? 'bg-warning' : 'bg-success'}">
-                            ${etiqueta.stock_actual} unidades
+                        <span class="badge ${etiqueta.stock_total === 0 ? 'bg-danger' : etiqueta.stock_total <= etiqueta.stock_minimo ? 'bg-warning' : 'bg-success'}">
+                            ${etiqueta.stock_total} unidades
                         </span>
                     </td>
                     <td>
@@ -354,9 +354,9 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         // Actualizar estadísticas
         function actualizarEstadisticas() {
             const total = etiquetas.length;
-            const stockDisponible = etiquetas.filter(e => e.stock_actual > 0).length;
-            const stockBajo = etiquetas.filter(e => e.stock_actual <= e.stock_minimo && e.stock_actual > 0).length;
-            const sinStock = etiquetas.filter(e => e.stock_actual === 0).length;
+            const stockDisponible = etiquetas.filter(e => e.stock_total > 0).length;
+            const stockBajo = etiquetas.filter(e => e.stock_total <= e.stock_minimo && e.stock_total > 0).length;
+            const sinStock = etiquetas.filter(e => e.stock_total === 0).length;
             const categorias = new Set(etiquetas.map(e => e.categoria_id)).size;
 
             document.getElementById('totalEtiquetas').textContent = total;
@@ -401,7 +401,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             </div>
                             <div class="col-md-6">
                                 <h6 class="fw-bold text-primary">Información de Stock</h6>
-                                <p><strong>Stock Actual:</strong> ${etiqueta.stock_actual} unidades</p>
+                                <p><strong>Stock Total:</strong> ${etiqueta.stock_total} unidades</p>
                                 <p><strong>Stock Mínimo:</strong> ${etiqueta.stock_minimo} unidades</p>
                                 
                                 <div class="fw-bold text-primary">
