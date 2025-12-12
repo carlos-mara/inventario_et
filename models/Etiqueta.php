@@ -89,7 +89,7 @@ class Etiqueta {
         try {
             // Aquí podrías agregar la lógica para verificar el token si es necesario
             
-            $sql = "SELECT etiquetas.nombre, etiquetas.descripcion, etiqueta_tamanos.alto, etiqueta_tamanos.ancho, stock_minimo, etiquetas.activa as activa,
+            $sql = "SELECT etiqueta_tamanos.id idTamano, etiquetas.nombre, etiquetas.descripcion, etiqueta_tamanos.alto, etiqueta_tamanos.ancho, stock_minimo, etiquetas.activa as activa,
                            etiquetas.foto_url, etiquetas.fecha_creacion, categorias.nombre AS categoria_nombre, categorias.id AS categoria_id
                     FROM etiquetas
                     INNER JOIN categorias ON categorias.id = etiquetas.categoria_id
@@ -238,6 +238,63 @@ class Etiqueta {
         }
     }
 
+    public function tieneTamanosEnProyectos($id_tamano)
+    {
+         try {
+            $sql = "SELECT COUNT(*) as count 
+                    FROM proyecto_etiquetas 
+                    WHERE id_tamano = :id_tamano";
 
+            $parametros = [':id_tamano' => $id_tamano];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            $data = $resultado->fetch(PDO::FETCH_ASSOC); // Cambiar a fetch() para obtener el count
+                
+            return [
+                "exito" => true,
+                "count" => $data['count'],
+                "en_proyectos" => $data['count'] > 0
+            ];
+
+        } catch (Exception $e) {
+            error_log("Error en tieneTamanosEnProyectos: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
+
+    public function obtenerTamanosActuales($etiqueta_id)
+    {
+        $sql = "SELECT id, alto, ancho 
+                FROM etiqueta_tamanos 
+                WHERE etiqueta_id = :etiqueta_id";
+        
+        $parametros = [':etiqueta_id' => $etiqueta_id];
+        $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+        return $resultado->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+ * Elimina tamaños específicos por IDs
+ */
+public function eliminarTamanosPorIds($ids_tamanos)
+{
+    try {
+        if (empty($ids_tamanos)) {
+            return true;
+        }
+        
+        $sql = "DELETE FROM etiqueta_tamanos WHERE id = :id";
+        
+        $this->conexion->ejecutarConParametros($sql, $ids_tamanos);
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Error eliminando tamaños por IDs: " . $e->getMessage());
+        return false;
+    }
+}
 }
 ?>

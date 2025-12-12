@@ -180,6 +180,7 @@ class EtiquetasControllers extends Etiqueta
                 
                 foreach($data['etiqueta'] as $row) {
                     $tamanos[] = [
+                        'idTamano' => $row['idTamano'],
                         'alto' => $row['alto'],
                         'ancho' => $row['ancho']
                     ];
@@ -209,98 +210,179 @@ class EtiquetasControllers extends Etiqueta
         }
     }
 
-    public function editarEtiqueta($id, $nombre, $descripcion, $foto, $stock_minimo, $categoria_id, $token, $tamanos)
-    {
-        try {
-            $validacion = $this->verificarAcceso($token);
-            if (!$validacion['exito']) {
-                return [
-                    'exito' => false,
-                    'msj' => $validacion['msj'],
-                    'codigo' => $validacion['codigo']
-                ];
+public function editarEtiqueta($id, $nombre, $descripcion, $foto, $stock_minimo, $categoria_id, $token, $tamanos)
+{
+    try {
+        $this->conexion->beginTransaction();
+        $fecha_actualizacion = date('Y-m-d H:i:s');
+
+        // 1. Actualizar etiqueta principal
+        $etiqueta_actualizada = $this->actualizarEtiqueta([
+            ':id' => $id, 
+            ':nombre' => $nombre, 
+            ':descripcion' => $descripcion,
+            ':foto_url' => $foto, 
+            ':stock_minimo' => $stock_minimo,
+            ':categoria_id' => $categoria_id, 
+            ':fecha' => $fecha_actualizacion
+        ]);
+        
+        if (!$etiqueta_actualizada['exito']) {
+            $this->conexion->rollBack();
+            return $etiqueta_actualizada;
+        }
+
+        // 2. Obtener tamaños actuales
+        $tamanos_actuales = $this->obtenerTamanosActuales($id);
+        
+        // 3. Identificar qué tamaños están en proyectos (PROTEGIDOS)
+        $tamanos_protegidos = [];
+        foreach ($tamanos_actuales as $tamano_actual) {
+            $verificacion = $this->tieneTamanosEnProyectos($tamano_actual['id']);
+            if ($verificacion['exito'] && $verificacion['count'] > 0) {
+                $tamanos_protegidos[] = $tamano_actual['id'];
             }
-
-            $this->conexion->beginTransaction();
-
-            $fecha_actualizacion = date('Y-m-d H:i:s');
-
-            // Actualizar información básica de la etiqueta
-            $parametros_etiqueta = [
-                ':id' => $id,
-                ':nombre' => $nombre,
-                ':descripcion' => $descripcion,
-                ':foto_url' => $foto,
-                ':stock_minimo' => $stock_minimo,
-                ':categoria_id' => $categoria_id,
-                ':fecha' => $fecha_actualizacion
-            ];
-
-            $etiqueta_actualizada = parent::actualizarEtiqueta($parametros_etiqueta);
-            
-
-            if (!$etiqueta_actualizada['exito']) {
+        }
+        
+        // 4. Procesar los tamaños nuevos del formulario
+        $tamanos_nuevos = json_decode($tamanos, true) ?: [];
+        $tamanos_a_eliminar = [];
+        $tamanos_a_actualizar = [];
+        $tamanos_a_insertar = [];
+        
+        foreach ($tamanos_nuevos as $tamano) {
+            // Validar
+            if (!isset($tamano['alto']) || !isset($tamano['ancho'])) {
                 $this->conexion->rollBack();
                 return [
                     "exito" => false,
-                    "msj" => "Error al actualizar la información de la etiqueta"
+                    "msj" => "Datos incompletos en tamaño"
                 ];
             }
-
-            // Eliminar tamaños existentes
-            $eliminacion_tamanos = parent::eliminarTamanos($id);
-            if (!$eliminacion_tamanos) {
-                $this->conexion->rollBack();
-                return [
-                    "exito" => false,
-                    "msj" => "Error al eliminar los tamaños existentes"
-                ];
-            }
-
-            // Insertar los nuevos tamaños
-            $tamanos = json_decode($tamanos, true);
             
-            if (!empty($tamanos)) {
-                foreach ($tamanos as $index => $tamano) {
-                    
-                    // Validar que los datos requeridos existan
-                    if (!isset($tamano['alto']) || !isset($tamano['ancho'])) {
-                        $this->conexion->rollBack();
-                        throw new Exception("Datos incompletos en el tamaño en la posición $index");
+            // Si tiene ID, es un tamaño existente
+            if (isset($tamano['id']) && $tamano['id'] > 0) {
+                // Verificar si está protegido
+                if (in_array($tamano['id'], $tamanos_protegidos)) {
+                    // Tamaño protegido: NO se puede modificar ni eliminar
+                    // Solo verificar que no quiera cambiar dimensiones
+                    // Buscar el tamaño actual para comparar dimensiones
+                    foreach ($tamanos_actuales as $t_actual) {
+                        if ($t_actual['id'] == $tamano['id']) {
+                            if ($t_actual['alto'] != $tamano['alto'] || $t_actual['ancho'] != $tamano['ancho']) {
+                                $this->conexion->rollBack();
+                                return [
+                                    "exito" => false,
+                                    "msj" => "No se pueden modificar las dimensiones de un tamaño asignado a proyectos (ID: {$tamano['id']})"
+                                ];
+                            }
+                            break;
+                        }
                     }
-
-                    $parametros_tamano = [
-                        ':etiqueta_id' => $id,
-                        ':alto' => $tamano['alto'],
-                        ':ancho' => $tamano['ancho'],
-                        ':fecha_creacion' => $fecha_actualizacion
-                    ];
-
-                    $tamano_d = parent::insertarTamanos($parametros_tamano);
-                    if (!$tamano_d) {
-                        $this->conexion->rollBack();
-                        throw new Exception("Error al insertar tamaños de etiqueta en la posición $index");
-                    }
+                    // Tamaño protegido se mantiene, no se hace nada
+                } else {
+                    // Tamaño NO protegido: se puede actualizar
+                    $tamanos_a_actualizar[] = $tamano;
+                }
+            } else {
+                // Sin ID: es un tamaño NUEVO
+                $tamanos_a_insertar[] = $tamano;
+            }
+        }
+        
+        // 5. Identificar tamaños que se quieren ELIMINAR
+        // (tamaños actuales que NO vinieron en el array)
+        foreach ($tamanos_actuales as $t_actual) {
+            $encontrado = false;
+            foreach ($tamanos_nuevos as $t_nuevo) {
+                if (isset($t_nuevo['id']) && $t_nuevo['id'] == $t_actual['id']) {
+                    $encontrado = true;
+                    break;
                 }
             }
-
-            $this->conexion->commit();
-
-            return [
-                "exito" => true,
-                "msj" => "Etiqueta editada exitosamente",
-                "etiqueta" => $etiqueta_actualizada
-            ];
-
-        } catch (Exception $e) {
-            $this->conexion->rollBack();
-            error_log("Error en editar etiqueta: " . $e->getMessage());
-            return [
-                "exito" => false,
-                "msj" => "Error interno del servidor: " . $e->getMessage()
-            ];
+            
+            if (!$encontrado) {
+                // Verificar si está protegido
+                if (in_array($t_actual['id'], $tamanos_protegidos)) {
+                    // No se puede eliminar tamaño protegido
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "No se puede eliminar un tamaño asignado a proyectos (ID: {$t_actual['id']})"
+                    ];
+                } else {
+                    // Se puede eliminar
+                    $tamanos_a_eliminar[] = $t_actual['id'];
+                }
+            }
         }
+        
+        // 6. Ejecutar operaciones
+        
+        // A) Eliminar tamaños no protegidos
+        if (!empty($tamanos_a_eliminar)) {
+            foreach($tamanos_a_eliminar AS $tamanos_eli){
+                $param=[
+                    ":id" => $tamanos_eli
+                ];
+                $this->eliminarTamanosPorIds($param);
+            }
+            
+        }
+        
+        // B) Actualizar tamaños no protegidos
+        foreach ($tamanos_a_actualizar as $tamano) {
+            // Usar tu método existente actualizarEtiqueta como base para crear un método
+            // O crear uno nuevo simple:
+            $sql = "UPDATE etiqueta_tamanos 
+                    SET alto = :alto, ancho = :ancho, fecha_creacion = :fecha 
+                    WHERE id = :id";
+            
+            $parametros = [
+                ':id' => $tamano['id'],
+                ':alto' => $tamano['alto'],
+                ':ancho' => $tamano['ancho'],
+                ':fecha' => $fecha_actualizacion
+            ];
+            
+            $this->conexion->ejecutarConParametros($sql, $parametros);
+        }
+        
+        // C) Insertar tamaños nuevos usando tu método existente
+        foreach ($tamanos_a_insertar as $tamano) {
+            $this->insertarTamanos([
+                ':etiqueta_id' => $id,
+                ':alto' => $tamano['alto'],
+                ':ancho' => $tamano['ancho'],
+                ':fecha_creacion' => $fecha_actualizacion
+            ]);
+        }
+        
+        $this->conexion->commit();
+        
+        // Mensaje informativo
+        $mensaje = "Etiqueta actualizada exitosamente";
+        if (!empty($tamanos_protegidos)) {
+            $mensaje .= ". " . count($tamanos_protegidos) . " tamaño(s) se mantuvieron sin cambios por estar en proyectos";
+        }
+        
+        return [
+            "exito" => true, 
+            "msj" => $mensaje,
+            "tamanos_protegidos" => $tamanos_protegidos
+        ];
+
+    } catch (Exception $e) {
+        $this->conexion->rollBack();
+        error_log("Error en editarEtiqueta: " . $e->getMessage());
+        return [
+            "exito" => false,
+            "msj" => "Error interno del servidor"
+        ];
     }
+}
+
+
 
     public function eliminarEtiqueta($id, $token)
     {

@@ -331,6 +331,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     <label class="form-label fw-bold">Ancho (cm) *</label>
                                     <input type="number" class="form-control" name="ancho[]" step="0.01" min="0.1" required 
                                         placeholder="Ej: 3.0" value="${tamano.ancho}">
+                                    <input type="hidden" name="idTamano[]" value="${tamano.idTamano}">
                                 </div>
                                 <div class="col-md-2">
                                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerTamano(this)" ${index === 0 ? 'disabled' : ''}>
@@ -372,6 +373,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         <label class="form-label fw-bold">Ancho (cm) *</label>
                         <input type="number" class="form-control" name="ancho[]" step="0.01" min="0.1" required 
                             placeholder="Ej: 3.0">
+                            <input type="hidden" name="idTamano[]" value="0">
                     </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerTamano(this)">
@@ -442,10 +444,12 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 // Recolectar tamaños
                 const altos = document.getElementsByName('alto[]');
                 const anchos = document.getElementsByName('ancho[]');
+                const idTamano = document.getElementsByName('idTamano[]');
 
                 const tamanos = [];
                 for (let i = 0; i < altos.length; i++) {
                     tamanos.push({
+                        id: idTamano[i].value,
                         alto: altos[i].value,
                         ancho: anchos[i].value,
                     });
