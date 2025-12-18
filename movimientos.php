@@ -600,40 +600,162 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             const movimiento = movimientos.find(m => m.id === movimientoId);
             if (!movimiento) return;
 
+            // Paso 1: Confirmación inicial
             const confirmResult = await Swal.fire({
-                title: '¿Estás seguro?',
-                text: `Vas a revertir este movimiento de ${movimiento.tipo}.`,
+                title: '¿Anular movimiento?',
+                html: `
+                    <div class="text-left">
+                        <p>Vas a <strong>ANULAR</strong> este movimiento de ${movimiento.tipo}.</p>
+                        <p><strong>Detalles:</strong></p>
+                        <ul class="text-sm">
+                            <li>Etiqueta: ${movimiento.etiqueta_nombre || movimiento.etiqueta_id}</li>
+                            <li>Cantidad: ${movimiento.cantidad}</li>
+                            <li>Fecha: ${new Date(movimiento.fecha).toLocaleDateString()}</li>
+                            ${movimiento.motivo ? `<li>Motivo original: ${movimiento.motivo}</li>` : ''}
+                        </ul>
+                        <p class="mt-3 text-red-600 font-bold">
+                            ⚠️ Esta acción no se puede deshacer y quedará registrada en el historial de anulaciones.
+                        </p>
+                    </div>
+                `,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Sí, revertir',
-                cancelButtonText: 'Cancelar'
+                confirmButtonText: 'Continuar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                showLoaderOnConfirm: false,
+                preConfirm: () => {
+                    return new Promise((resolve) => {
+                        resolve(true);
+                    });
+                }
             });
 
-            if (confirmResult.isConfirmed) {
-                try {
-                    const formData = new FormData();
-                    formData.append('peticion', 'revertir');
-                    formData.append('token', authToken);
-                    formData.append('movimiento_id', movimientoId);
+            if (!confirmResult.isConfirmed) return;
 
-                    const response = await fetch('controllers/movimientos.php', {
-                        method: 'POST',
-                        body: formData
+            // Paso 2: Solicitar motivo de anulación
+            const { value: motivo } = await Swal.fire({
+                title: 'Motivo de la anulación',
+                input: 'textarea',
+                inputLabel: 'Por favor, especifica el motivo de la anulación:',
+                inputPlaceholder: 'Ejemplo: Datos incorrectos, error de captura, duplicado...',
+                inputAttributes: {
+                    'aria-label': 'Escribe el motivo de la anulación'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Confirmar anulación',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                inputValidator: (value) => {
+                    if (!value || value.trim().length < 10) {
+                        return 'Debes ingresar un motivo de al menos 10 caracteres';
+                    }
+                    if (value.trim().length > 500) {
+                        return 'El motivo no debe exceder 500 caracteres';
+                    }
+                },
+                customClass: {
+                    validationMessage: 'my-validation-message'
+                }
+            });
+
+            if (!motivo) return;
+
+            // Paso 3: Confirmación final
+            const finalConfirm = await Swal.fire({
+                title: '¿Confirmar anulación?',
+                html: `
+                    <div class="text-left">
+                        <p><strong>Resumen de la anulación:</strong></p>
+                        <ul class="text-sm my-3">
+                            <li><strong>Movimiento ID:</strong> #${movimiento.id}</li>
+                            <li><strong>Tipo:</strong> ${movimiento.tipo}</li>
+                            <li><strong>Motivo de anulación:</strong></li>
+                            <div class="bg-gray-100 p-2 rounded mt-1">
+                                ${motivo}
+                            </div>
+                        </ul>
+                        <p class="mt-3 text-red-600 font-bold">
+                            ⚠️ Esta acción ajustará el inventario y registrará la anulación permanentemente.
+                        </p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, anular definitivamente',
+                cancelButtonText: 'Revisar nuevamente',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true
+            });
+
+            if (!finalConfirm.isConfirmed) return;
+
+            try {
+                Swal.fire({
+                    title: 'Procesando...',
+                    text: 'Anulando movimiento...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                const formData = new FormData();
+                formData.append('peticion', 'anular_movimiento');
+                formData.append('token', authToken);
+                formData.append('movimiento_id', movimientoId);
+                formData.append('motivo_anulacion', motivo);
+
+                const response = await fetch('controllers/movimientos.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+
+                Swal.close();
+                
+                if (result.exito) {
+                    await Swal.fire({
+                        title: '¡Anulado!',
+                        text: 'El movimiento ha sido anulado exitosamente.',
+                        icon: 'success',
+                        confirmButtonText: 'Aceptar',
+                        timer: 3000,
+                        timerProgressBar: true
                     });
                     
-                    const result = await response.json();
+                    // Actualizar la lista de movimientos
+                    await cargarMovimientos();
                     
-                    if (result.exito) {
-                        mostrarMensaje('success', 'Movimiento revertido exitosamente');
-                        await cargarMovimientos();
-                    } else {
-                        throw new Error(result.msj);
-                    }
-                } catch (error) {
-                    console.error('Error revirtiendo movimiento:', error);
-                    mostrarMensaje('error', error.message || 'Error al revertir el movimiento');
+                    // Opcional: Registrar en consola para auditoría
+                    console.log(`Movimiento #${movimientoId} anulado. Motivo: ${motivo}`);
+                } else {
+                    throw new Error(result.msj);
                 }
+            } catch (error) {
+                Swal.close();
+                console.error('Error anulando movimiento:', error);
+                
+                await Swal.fire({
+                    title: 'Error',
+                    html: `
+                        <div class="text-left">
+                            <p>No se pudo anular el movimiento:</p>
+                            <p class="text-red-600 mt-2">${error.message}</p>
+                            <p class="text-sm text-gray-600 mt-3">
+                                Verifica que tengas los permisos necesarios y que el movimiento no haya sido ya anulado.
+                            </p>
+                        </div>
+                    `,
+                    icon: 'error',
+                    confirmButtonText: 'Entendido'
+                });
             }
+            
         }
 
         // Actualizar estadísticas

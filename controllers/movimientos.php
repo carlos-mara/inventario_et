@@ -181,35 +181,121 @@ class MovimientosControllers extends Movimiento
         }
     }
 
-    public function revertirMov($token, $movimiento_id) 
+    public function anularMovimiento($token, $movimiento_id, $motivo_anulacion) 
     {
         try {
             $validacion = $this->verificarAcceso($token);
-                if (!$validacion['exito']) {
+            if (!$validacion['exito']) {
                     return $validacion;
             }
+            $this->conexion->beginTransaction();
+            // 2. Obtener movimiento
+            $movimiento = parent::obtenerMovimientoPorId($movimiento_id);
+            
+            $ajustar = $this->ajustarStockPorAnulacion($movimiento[0]);
 
-            $resultado = parent::revertirMovimiento($movimiento_id);
+            if($ajustar['exito']){
+                
+                $marcar = parent::marcarComoAnulado($movimiento_id);
 
-            if ($resultado['exito']) {
-                return [
-                    "exito" => true,
-                    "msj" => "Movimiento revertido exitosamente"
-                ];
-            } else {
-                return [
-                    "exito" => false,
-                    "msj" => $resultado['msj']
-                ];
+                if(!$marcar){
+                    $this->conexion->rollBack();
+                    return ['exito' => false, 'msj' => 'Error al marcar anulado'];
+                }
+
+            }else {
+                $this->conexion->rollBack();
+                return ['exito' => false, 'msj' => 'Error al ajustar stock'];
             }
+            
+            // 5. Marcar como anulado (soft delete)
+            
+            $this->conexion->commit();
+            return ['exito' => true, 'msj' => 'Movimiento anulado'];
+            
         } catch (Exception $e) {
-            error_log("Error en revertirMovimiento: " . $e->getMessage());
-            return [
-                "exito" => false,
-                "msj" => "Error al revertir el movimiento"
-            ];
+            // Rollback
+            $this->conexion->rollBack();
+            return ['exito' => false, 'msj' => $e->getMessage()];
         }
     }
+
+    public function ajustarStockPorAnulacion($movimiento)
+    {
+        try {
+            // 1. Obtener el ID del tamaño
+            $id_tamano = parent::obtenerIdTamanoPorDimensiones(
+                $movimiento['alto'], 
+                $movimiento['ancho']
+            );
+            
+            if (!$id_tamano) {
+                throw new Exception("No se encontró el tamaño para las dimensiones: {$movimiento['alto']}x{$movimiento['ancho']}");
+            }
+            
+            // 2. Obtener cantidades actuales
+            $cantidad_actual_tamano = $this->obtenerCantidadActualTamano($id_tamano);
+            $cantidad_actual_etiqueta = $this->obtenerCantidadActualEt($movimiento['etiqueta_id']);
+            
+            // 3. Calcular nuevo stock según tipo de movimiento
+            $nueva_cantidad_tamano = 0;
+            $nueva_cantidad_etiqueta = 0;
+            
+            if ($movimiento['tipo'] === 'entrada') {
+                // Si anulamos una ENTRADA, debemos RESTAR esa cantidad
+                $nueva_cantidad_tamano = $cantidad_actual_tamano - $movimiento['cantidad'];
+                $nueva_cantidad_etiqueta = $cantidad_actual_etiqueta - $movimiento['cantidad'];
+                
+                // Validar que no quede negativo
+                if ($nueva_cantidad_tamano < 0) {
+                    throw new Exception("No se puede anular: el stock quedaría negativo en este tamaño");
+                }
+                
+                if ($nueva_cantidad_etiqueta < 0) {
+                    throw new Exception("No se puede anular: el stock total de la etiqueta quedaría negativo");
+                }
+                
+            } elseif ($movimiento['tipo'] === 'salida') {
+                // Si anulamos una SALIDA, debemos SUMAR esa cantidad
+                $nueva_cantidad_tamano = $cantidad_actual_tamano + $movimiento['cantidad'];
+                $nueva_cantidad_etiqueta = $cantidad_actual_etiqueta + $movimiento['cantidad'];
+                
+            } else {
+                throw new Exception("Tipo de movimiento no válido: {$movimiento['tipo']}");
+            }
+            
+            // 4. Actualizar stock en la tabla tamanos_etiquetas
+            $this->actualizarCantidadEtiquetaTamano($id_tamano, $nueva_cantidad_tamano);
+            
+            // 5. Actualizar stock total en la tabla etiquetas
+            $this->actualizarCantidadEtiqueta($movimiento['etiqueta_id'], $nueva_cantidad_etiqueta);
+            
+            // 6. Si es una salida con proyecto, revertir cantidad entregada
+            if ($movimiento['tipo'] === 'salida' && !empty($movimiento['cod_proyecto'])) {
+                $this->revertirCantidadEntregadaProyecto(
+                    $movimiento['cod_proyecto'],
+                    $movimiento['etiqueta_id'],
+                    $movimiento['cantidad']
+                );
+            }
+            
+            return [
+                'exito' => true,
+                'datos' => [
+                    'id_tamano' => $id_tamano,
+                    'stock_anterior_tamano' => $cantidad_actual_tamano,
+                    'stock_nuevo_tamano' => $nueva_cantidad_tamano,
+                    'stock_anterior_etiqueta' => $cantidad_actual_etiqueta,
+                    'stock_nuevo_etiqueta' => $nueva_cantidad_etiqueta
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error en ajustarStockPorAnulacion: " . $e->getMessage());
+            throw $e; // Re-lanzar para manejo superior
+        }
+    }
+
     
 }
 
@@ -360,12 +446,6 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $respuesta = $resultado;
             break;
 
-            case 'revertir_movimiento':
-                $movimiento_id = $_POST['movimiento_id'] ?? null;
-                $token = $_POST['token'] ?? '';
-                $respuesta = $mov->revertirMov($token, $movimiento_id);
-            break;
-
             case 'historial':
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 if(isset($_POST['fecha'])){
@@ -383,6 +463,22 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                     "msj" => "Controlador funcionando correctamente",
                     "post_data" => $_POST
                 ];
+            break;
+
+            case 'anular_movimiento':
+                $movimiento_id = $_POST['movimiento_id'] ?? null;
+                $token = $_POST['token'] ?? '';
+                $motivo_anulacion = $_POST['motivo'] ?? '';
+                
+                if (empty($movimiento_id)) {
+                    $respuesta = [
+                        "exito" => false,
+                        "msj" => "ID de movimiento requerido"
+                    ];
+                    break;
+                }
+                
+                $respuesta = $mov->anularMovimiento($token, $movimiento_id, $motivo_anulacion);
             break;
 
             default:

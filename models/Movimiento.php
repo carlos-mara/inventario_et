@@ -1,7 +1,7 @@
 <?php 
 require_once "../conf/conexion.php";
 class Movimiento {
-    private $conexion;
+    protected $conexion;
     
     public function __construct() {
         $this->conexion = new Conexion();
@@ -132,59 +132,104 @@ class Movimiento {
         }
     }
 
-    
-
-    public function revertirMovimiento($movimiento_id){
+    public function obtenerMovimientoPorId($movimiento_id) {
         try {
-            // Obtener el movimiento original
-            $sql = "SELECT * FROM movimientos_inventario WHERE id = :movimiento_id";
-            $parametros = [':movimiento_id' => $movimiento_id];
-            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
-            $movimiento = $resultado->fetch(PDO::FETCH_ASSOC);
+            $params = [':id' => $movimiento_id];
 
-            if (!$movimiento) {
-                return [
-                    "exito" => false,
-                    "msj" => "Movimiento no encontrado"
-                ];
-            }
+            $sql = "SELECT movimientos_inventario.*, usuarios.username AS usuario_nombre, etiquetas.nombre AS etiqueta_nombre
+            FROM movimientos_inventario
+            JOIN etiquetas ON movimientos_inventario.etiqueta_id = etiquetas.id
+            JOIN usuarios ON movimientos_inventario.usuario_id = usuarios.id
+            WHERE movimientos_inventario.id = :id";
+            $resultado = $this->conexion->ejecutarConParametros($sql, $params);
+            return $resultado->fetchAll(PDO::FETCH_ASSOC);
 
-            // Calcular los nuevos valores
-            $etiqueta_id = $movimiento['etiqueta_id'];
-            $tipo_reverso = $movimiento['tipo'] === 'entrada' ? 'salida' : 'entrada';
-            $cantidad = $movimiento['cantidad'];
-            $cantidad_anterior = $this->obtenerCantidadActual($etiqueta_id);
-            $cantidad_nueva = $tipo_reverso === 'entrada' ? $cantidad_anterior + $cantidad : $cantidad_anterior - $cantidad;
-
-            // Registrar el movimiento de reversión
-            $this->registrarMovimiento(
-                $etiqueta_id,
-                $tipo_reverso,
-                $cantidad,
-                $movimiento['precio'],
-                "Reversión del movimiento ID: " . $movimiento_id,
-                null,
-                null,
-                $cantidad_anterior,
-                $cantidad_nueva,
-                $movimiento['cod_proyecto'],
-                $movimiento['usuario_id']
-            );
-
-            // Actualizar la cantidad en la etiqueta
-            $this->actualizarCantidadEtiqueta($etiqueta_id, $cantidad_nueva);
-
-            return [
-                "exito" => true,
-                "msj" => "Movimiento revertido exitosamente"
-            ];
         } catch (Exception $e) {
-            error_log("Error al revertir movimiento: " . $e->getMessage());
-            return [
-                "exito" => false,
-                "msj" => "Error al revertir el movimiento"
-            ];
+            error_log("Error obteniendo movimiento: " . $e->getMessage());
+            return [];
         }
     }
+
+    /**
+     * Obtiene el ID del tamaño basado en dimensiones
+     */
+    public function obtenerIdTamanoPorDimensiones($alto, $ancho)
+    {
+        $params = [
+            ':alto' => $alto,
+            ':ancho' => $ancho
+        ];
+        
+        try {
+            $sql = "SELECT id FROM etiqueta_tamanos WHERE alto = :alto AND ancho = :ancho LIMIT 1";
+            $resultado = $this->conexion->ejecutarConParametros($sql, $params);
+            $res = $resultado->fetch(PDO::FETCH_ASSOC);
+            
+            return $res['id'] ?? null;
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerIdTamanoPorDimensiones: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function revertirCantidadEntregadaProyecto($cod_proyecto, $etiqueta_id, $cantidad)
+    {
+        try {
+            $params = [
+                ':cod_proyecto' => $cod_proyecto,
+                ':etiqueta_id' => $etiqueta_id,
+            ];
+            // Primero verificar que exista la relación proyecto-etiqueta
+            $sql = "SELECT id FROM proyecto_etiquetas 
+                              WHERE cod_proyecto = :cod_proyecto AND etiqueta_id = :etiqueta_id";
+            $resultado = $this->conexion->ejecutarConParametros($sql, $params);
+            $resultado->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($resultado->fetch()) {
+                $params = [
+                    ':cod_proyecto' => $cod_proyecto,
+                    ':etiqueta_id' => $etiqueta_id,
+                    ':cantidad' => $cantidad
+                ];
+
+                // Restar la cantidad entregada
+                $sql_actualizar = "UPDATE proyecto_etiquetas 
+                                   SET cantidad_entregada = cantidad_entregada - :cantidad 
+                                   WHERE cod_proyecto = :cod_proyecto AND etiqueta_id = :etiqueta_id";
+                
+                $resultado = $this->conexion->ejecutarConParametros($sql_actualizar, $params);
+                
+                return $resultado->rowCount() > 0;
+                
+                if (!$resultado) {
+                    throw new Exception("Error al revertir cantidad entregada en proyecto");
+                }
+                
+                return true;
+            }
+            
+            return false; // No había relación, no hay nada que revertir
+            
+        } catch (Exception $e) {
+            error_log("Error en revertirCantidadEntregadaProyecto: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function marcarComoAnulado($movimiento_id)
+    {
+        try {
+            $sql = "UPDATE movimientos_inventario SET activo = 4 WHERE id = :id";
+            $resultado = $this->conexion->ejecutarConParametros($sql, [':id'=>$movimiento_id]);
+                
+            return $resultado->rowCount() > 0;
+            
+        } catch (Exception $e) {
+            error_log("Error en marcarMovimientoComoAnulado: " . $e->getMessage());
+            return false;
+        }
+    }
+    
 }
 ?>
