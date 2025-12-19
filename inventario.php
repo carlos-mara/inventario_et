@@ -260,7 +260,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         let authToken = null;
         let etiquetas = [];
         let currentPage = 1;
-        const itemsPerPage = 10;
+        const itemsPerPage = 200;
 
         
 
