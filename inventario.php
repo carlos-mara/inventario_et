@@ -29,6 +29,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css">
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
     <style>
         
         .user-avatar {
@@ -198,30 +199,9 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     </button>
                                 </div>
                                 <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover" id="tablaEtiquetas">
-                                            <thead>
-                                                <tr>
-                                                    <th></th>
-                                                    <th>Nombre</th>
-                                                    <th>Categoría</th>
-                                                    <th>Stock Total</th>
-                                                    <th>Estado</th>
-                                                    <th>Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="etiquetasBody">
-                                                <!-- Las etiquetas se cargarán aquí -->
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <div id="tablaEtiquetasContainer"></div>
                                     
-                                    <!-- Paginación -->
-                                    <nav aria-label="Page navigation">
-                                        <ul class="pagination justify-content-center mt-4" id="pagination">
-                                            <!-- La paginación se generará aquí -->
-                                        </ul>
-                                    </nav>
+                                    
                                 </div>
                             </div>
                         </div>
@@ -255,9 +235,11 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
     <script>
         let userData = null;
         let authToken = null;
+        let grid = null;
         let etiquetas = [];
         let currentPage = 1;
         const itemsPerPage = 200;
@@ -280,19 +262,116 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 
                 if (result.exito) {
                     etiquetas = result.data;
-                    mostrarEtiquetas();
+                    
+                    // Configurar Grid.js
+                    grid = new gridjs.Grid({
+                        columns: [
+                            
+                            {
+                                name: 'Foto',
+                                formatter: (cell) => gridjs.html(`
+                                    <img src="${cell ? 'uploads/' + cell : 'https://placehold.co/600X400?text=SIN+FOTO&font=roboto'}" 
+                                        class="img-fluid rounded" width="90">
+                                `)
+                            },
+                            {
+                                name: 'Nombre',
+                                formatter: (cell, row) => gridjs.html(`
+                                    <strong>${row.cells[1].data}</strong>
+                                    ${row.cells[4].data ? `<br><small class="text-muted">${row.cells[4].data}</small>` : ''}
+                                `)
+                            },
+                            'Categoría',
+                            {
+                                name: 'Stock',
+                                formatter: (cell, row) => {
+                                    const stock = row.cells[3].data;
+                                    const stockMin = row.cells[5].data;
+                                    const badgeClass = stock === 0 ? 'danger' : 
+                                                    stock <= stockMin ? 'warning' : 'success';
+                                    return gridjs.html(`
+                                        <span class="badge bg-${badgeClass}">
+                                            ${stock} unidades
+                                        </span>
+                                    `);
+                                }
+                            },
+                            /* {
+                                name: 'Estado',
+                                formatter: (cell) => gridjs.html(`
+                                    <span class="badge ${cell ? 'bg-success' : 'bg-secondary'}">
+                                        ${cell ? 'Activa' : 'Inactiva'}
+                                    </span>
+                                `)
+                            }, */
+                            'Descripción', // Columna oculta para el formatter
+                            'Stock Mínimo', // Columna oculta
+                            {
+                                name: 'Acciones',
+                                formatter: (cell, row) => gridjs.html(`
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="verDetalle(${row.cells[6].data})" title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning" onclick="editarEtiqueta(${row.cells[6].data})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="eliminarEtiqueta(${row.cells[6].data})" title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                `)
+                            }
+                        ],
+                        data: etiquetas.map(item => [
+                            
+                            item.foto_url,
+                            
+                            item.nombre,
+                            item.categoria_nombre || 'Sin categoría',
+                            item.stock_total,
+                            item.descripcion,
+                            item.stock_minimo,
+                            item.id,
+                        ]),
+                        pagination: {
+                            limit: 15,
+                            summary: true
+                        },
+                        search: true,
+                        sort: true,
+                        language: {
+                            'search': {
+                                'placeholder': '🔍 Buscar...'
+                            },
+                            'pagination': {
+                                'previous': '⬅️',
+                                'next': '➡️',
+                                'showing': 'Mostrando',
+                                'results': () => 'registros'
+                            }
+                        },
+                        style: {
+                            table: {
+                                'font-size': '0.9rem'
+                            },
+                            th: {
+                                'background-color': '#f8f9fa',
+                                'font-weight': '600'
+                            }
+                        }
+                    }).render(document.getElementById('tablaEtiquetasContainer'));
+                    
                     actualizarEstadisticas();
-                } else {
-                    throw new Error(result.msj);
                 }
             } catch (error) {
-                console.error('Error cargando etiquetas:', error);
-                mostrarMensaje('error', 'Error al cargar las etiquetas');
+                console.error('Error:', error);
+                mostrarMensaje('error', 'Error al cargar datos');
             }
         }
 
         // Mostrar etiquetas en la tabla
-        function mostrarEtiquetas() {
+        /* function mostrarEtiquetas() {
             const tbody = document.getElementById('etiquetasBody');
             tbody.innerHTML = '';
 
@@ -340,7 +419,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             });
 
             actualizarPaginacion();
-        }
+        } */
 
         function mostrarMensaje(tipo, mensaje) {
             Swal.fire({
@@ -499,7 +578,24 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 
                 if (result.exito) {
                     mostrarMensaje('success', 'Etiqueta eliminada exitosamente');
-                    await cargarEtiquetas();
+                    
+                    // Quitar del array local
+                    etiquetas = etiquetas.filter(e => e.id !== id);
+
+                    // Refrescar grid
+                    grid.updateConfig({
+                        data: etiquetas.map(item => [
+                            item.foto_url,
+                            item.nombre,
+                            item.categoria_nombre || 'Sin categoría',
+                            item.stock_total,
+                            item.descripcion,
+                            item.stock_minimo,
+                            item.id
+                        ])
+                    }).forceRender();
+
+                    actualizarEstadisticas();
                 } else {
                     throw new Error(result.msj);
                 }
@@ -516,6 +612,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 mostrarMensaje('info', 'Funcionalidad de edición no implementada aún.');
             }
         }
+
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', async function() {
