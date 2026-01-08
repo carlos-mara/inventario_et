@@ -10,9 +10,14 @@ class Categoria {
     
     public function listar() {
         try {
-            $sql = "SELECT *
-                    FROM categorias 
-                    WHERE activa = 1 ORDER BY id DESC";
+            $sql = "SELECT  cat.*, COUNT(et.id) AS cantidad_etiquetas
+            FROM categorias cat
+            LEFT JOIN etiquetas et 
+                ON cat.id = et.categoria_id 
+                AND et.activa = 1
+            WHERE cat.activa = 1
+            GROUP BY cat.id
+            ORDER BY cat.id DESC";
             
             $parametros = [];
             
