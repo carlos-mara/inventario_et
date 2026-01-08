@@ -72,6 +72,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             color: #6c757d;
         }
     </style>
+    <link href="https://unpkg.com/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
 </head>
 <body>
     <?php if (!$tieneAcceso): ?>
@@ -249,6 +250,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     </h5>
                                 </div>
                                 <div class="card-body">
+                                    <div id="tablaMovimientosContainer"></div>
                                     <div class="table-responsive">
                                         <table class="table table-hover" id="tablaMovimientos">
                                             <thead>
@@ -306,7 +308,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+    <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
     <?php endif; ?>
     <script>
         let userData = null;
@@ -330,7 +332,106 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 
                 if (result.exito) {
                     movimientos = result.data;
-                    mostrarMovimientos();
+
+                    grid = new gridjs.Grid({
+                        columns: [
+                            
+                            {
+                                name: 'Fecha', 
+                                    formatter: (cell) => {
+                                        const fecha = new Date(cell);
+                                        return fecha.toLocaleString('es-ES');
+                                    }
+                                
+                            },
+                            'Etiqueta',
+                            {
+                                name: 'Tipo',
+                                formatter: (cell, row) => {
+                                    const stock = row.cells[2].data;
+                                    const badgeClass = stock === 'salida' ? 'danger' : 'success';
+                                    return gridjs.html(`
+                                        <span class="badge bg-${badgeClass}">
+                                            ${stock}
+                                        </span>
+                                    `);
+                                }
+                            },
+                            {
+                                name: 'Cantidad',
+                                formatter: (cell, row) => {
+                                    const tipo = row.cells[2].data;
+                                    const cantidad = row.cells[3].data;
+                                    const valorSigno = tipo === 'salida' ? '-' : '+';
+                                    const badgeClass = tipo === 'salida' ? 'danger' : 'success';
+                                    return gridjs.html(`
+                                        <span class="fw-bold text-${badgeClass}">
+                                            ${valorSigno}${cantidad}
+                                        </span>
+                                    `);
+                                }
+                            },
+                            'Cantidad Anterior',
+                            'Cantidad Nueva',
+                            'Usuario',
+                            'Motivo',
+                            
+                            {
+                                name: 'Acciones',
+                                formatter: (cell, row) => gridjs.html(`
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="verDetalleMovimiento(${row.cells[8].data})" title="Ver detalles">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="revertirMovimiento(${row.cells[8].data})" title="Eliminar">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </div>
+                                `)
+                            }
+                        ],
+                        data: movimientos.map(item => [
+                            
+                            item.fecha_movimiento,
+                            
+                            item.etiqueta_nombre,
+                            item.tipo,
+                            item.cantidad,
+                            item.cantidad_anterior,
+                            item.cantidad_nueva,
+                            item.usuario_nombre,
+                            item.motivo,
+                            item.id,
+                        ]),
+                        pagination: {
+                            limit: 15,
+                            summary: true
+                        },
+                        search: true,
+                        sort: true,
+                        language: {
+                            'search': {
+                                'placeholder': '🔍 Buscar...'
+                            },
+                            'pagination': {
+                                'previous': '⬅️',
+                                'next': '➡️',
+                                'showing': 'Mostrando',
+                                'results': () => 'registros'
+                            }
+                        },
+                        style: {
+                            table: {
+                                'font-size': '0.9rem'
+                            },
+                            th: {
+                                'background-color': '#f8f9fa',
+                                'font-weight': '600'
+                            }
+                        }
+                    }).render(document.getElementById('tablaMovimientosContainer'));
+
+                    /* mostrarMovimientos(); */
                     actualizarEstadisticas();
                 } else {
                     throw new Error(result.msj);
