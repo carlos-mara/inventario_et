@@ -101,7 +101,8 @@ class Movimiento {
 
     public function obtenerMovimientos() {
         try {
-            $sql = "SELECT movimientos_inventario.*, usuarios.username AS usuario_nombre, etiquetas.nombre AS etiqueta_nombre
+            $sql = "SELECT movimientos_inventario.*, usuarios.username AS usuario_nombre, etiquetas.nombre AS etiqueta_nombre,
+            etiquetas.foto_url AS etiqueta_foto
             FROM movimientos_inventario
             JOIN etiquetas ON movimientos_inventario.etiqueta_id = etiquetas.id
             JOIN usuarios ON movimientos_inventario.usuario_id = usuarios.id

@@ -578,6 +578,15 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             </li>
                         </ul>
                     </div>
+                    <div class="col-md-6">
+                        <img src="uploads/${movimiento.etiqueta_foto}" alt="Foto de etiqueta" class="foto-evidencia img-fluid">
+                    </div>
+                    <div class="col-md-6  align-items-center d-flex flex-column">
+                        <ul class="list-group mt-3 w-100">
+                            <li class="list-group-item"><strong>Alto:</strong> ${movimiento.alto} cm</li>
+                            <li class="list-group-item"><strong>Ancho:</strong> ${movimiento.ancho} cm</li>
+                        </ul>
+                    </div>
                 </div>
                 ${contenidoFoto}
             `;
