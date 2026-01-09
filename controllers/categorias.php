@@ -117,6 +117,40 @@ class CategoriasControllers extends Categoria
             ];
         }
     }
+    public function eliminarCategoria($id, $token)
+    {
+        try {
+            $validacion = $this->verificarAcceso($token);
+            if (!$validacion['exito']) {
+                return [
+                    'exito' => false,
+                    'msj' => $validacion['msj'],
+                    'codigo' => $validacion['codigo']
+                ];
+            }
+
+            $data = parent::eliminar($id);
+            
+            if ($data) {
+                return [
+                    "exito" => true,
+                    "msj" => "Categoria eliminada exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "Error al eliminar la categoria"
+                ];
+            }
+
+        } catch (Exception $e) {
+            error_log("Error en eliminar categoria: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
 }
 
 // =============================================
@@ -157,6 +191,12 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 $descripcion = $_POST['descripcion'] ?? '';
                 $respuesta = $cat->nuevaCategoria($nombre, $descripcion, $token);
+            break;
+
+            case 'eliminar':
+                $id = $_POST['id'] ?? '';
+                $token = $_POST['token'] ?? $_GET['token'] ?? '';
+                $respuesta = $cat->eliminarCategoria($id, $token);
             break;
 
             default:

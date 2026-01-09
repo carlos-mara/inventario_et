@@ -61,5 +61,37 @@ class Categoria {
         }
     }
 
+    public function eliminar($id) {
+        try {
+            $sql = "UPDATE categorias
+                    SET activa = 2
+                    WHERE id = :id";
+            
+            $parametros = [
+                ':id' => $id
+            ];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            if ($resultado->rowCount() > 0) {
+                return [
+                    "exito" => true,
+                    "msj" => "Categoria eliminada exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "No se pudo eliminar la categoria"
+                ];
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error eliminando categoria: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
+
 }
 ?>
