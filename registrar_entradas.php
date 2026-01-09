@@ -249,10 +249,10 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                             <input type="text" class="form-control" id="referencia" placeholder="N° Factura, Orden de Compra, etc.">
                                         </div>
 
-                                        <div class="mb-3">
+                                        <!-- <div class="mb-3">
                                             <label class="form-label fw-bold">Cód. de Proyecto <span class="text-muted">(opcional)</span></label>
                                             <input type="text" class="form-control" id="cod" placeholder="Código de proyecto relacionado">
-                                        </div>
+                                        </div> -->
 
                                         <!-- Observaciones -->
                                         <div class="mb-4">
@@ -543,7 +543,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 const motivo = document.getElementById('motivo').value;
                 const observaciones = document.getElementById('observaciones').value;
                 const referencia = document.getElementById('referencia').value;
-                const cod_proyecto = document.getElementById('cod').value;
+                const cod_proyecto = null;
                 const usuario_id = userData.id;
                 
                 const tamano = obtenerTamanoSeleccionado();

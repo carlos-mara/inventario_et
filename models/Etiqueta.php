@@ -65,7 +65,7 @@ class Etiqueta {
 
     public function listarPorProyecto($id) {
         try {
-            $sql = "SELECT e.activa, e.id, e.foto_url, e.stock_actual, e.descripcion, e.nombre, categorias.nombre AS categoria_nombre, ep.cantidad cantidad_asignada, ep.cantidad_entregada
+            $sql = "SELECT e.activa, e.id, e.foto_url, e.stock_total, e.descripcion, e.nombre, categorias.nombre AS categoria_nombre, ep.cantidad cantidad_asignada, ep.cantidad_entregada
                     FROM proyecto_etiquetas AS ep
                     JOIN etiquetas AS e ON e.id = ep.id_etiqueta
                     JOIN categorias ON categorias.id = e.categoria_id

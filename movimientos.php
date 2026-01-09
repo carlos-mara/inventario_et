@@ -179,7 +179,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     </div>
 
                     <!-- Barra de Acciones y Filtros -->
-                    <div class="row mb-4">
+                    <!-- <div class="row mb-4">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-body">
@@ -214,7 +214,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Botones de Acción Rápida -->
                     <div class="row mb-4">
