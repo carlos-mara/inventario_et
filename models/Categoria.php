@@ -92,6 +92,40 @@ class Categoria {
             ];
         }
     }
+    public function editar($id, $nombre, $descripcion) {
+        try {
+            $sql = "UPDATE categorias
+                    SET nombre = :nombre,
+                        descripcion = :descripcion
+                    WHERE id = :id";
+            
+            $parametros = [
+                ':id' => $id,
+                ':nombre' => $nombre,
+                ':descripcion' => $descripcion
+            ];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            if ($resultado->rowCount() > 0) {
+                return [
+                    "exito" => true,
+                    "msj" => "Categoria actualizada exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "No se pudo actualizar la categoria"
+                ];
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error actualizando categoria: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
 
 }
 ?>

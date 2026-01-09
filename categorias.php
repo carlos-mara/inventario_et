@@ -361,7 +361,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <h5 class="card-title mb-0">
                                     <i class="fas fa-folder ${categoria.activa ? 'text-primary' : 'text-secondary'} me-2"></i>
-                                    ${categoria.nombre}
+                                    ${categoria.nombre.toUpperCase()}
                                 </h5>
                                 <span class="badge bg-${categoria.activa ? 'success' : 'secondary'}">
                                     ${categoria.activa ? 'Activa' : 'Inactiva'}
@@ -369,7 +369,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             </div>
                             
                             <p class="card-text text-muted small mb-3">
-                                ${categoria.descripcion || 'Sin descripción'}
+                                ${categoria.descripcion.toUpperCase() || 'Sin descripción'}
                             </p>
                             
                             <div class="d-flex justify-content-between align-items-center">
@@ -408,9 +408,9 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 
                 tr.innerHTML = `
                     <td>
-                        <strong>${categoria.nombre}</strong>
+                        <strong>${categoria.nombre.toUpperCase()}</strong>
                     </td>
-                    <td>${categoria.descripcion || '—'}</td>
+                    <td>${categoria.descripcion.toUpperCase() || '—'}</td>
                     <td>
                         <span class="badge bg-${categoria.activa ? 'success' : 'secondary'}">
                             ${categoria.activa ? 'Activa' : 'Inactiva'}
@@ -508,7 +508,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             document.getElementById('categoriaId').value = categoria.id;
             document.getElementById('categoriaNombre').value = categoria.nombre;
             document.getElementById('categoriaDescripcion').value = categoria.descripcion || '';
-            document.getElementById('categoriaActiva').checked = categoria.activa;
+            /* document.getElementById('categoriaActiva').checked = categoria.activa; */
 
             // Cambiar título del modal
             document.getElementById('modalCategoriaLabel').innerHTML = 
@@ -537,7 +537,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 formData.append('id', id);
                 formData.append('nombre', document.getElementById('categoriaNombre').value);
                 formData.append('descripcion', document.getElementById('categoriaDescripcion').value);
-                formData.append('activa', document.getElementById('categoriaActiva').checked ? '1' : '0');
+                
 
                 const response = await fetch('controllers/categorias.php', {
                     method: 'POST',

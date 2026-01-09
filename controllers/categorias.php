@@ -117,6 +117,7 @@ class CategoriasControllers extends Categoria
             ];
         }
     }
+
     public function eliminarCategoria($id, $token)
     {
         try {
@@ -145,6 +146,41 @@ class CategoriasControllers extends Categoria
 
         } catch (Exception $e) {
             error_log("Error en eliminar categoria: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
+
+    public function editarCategoria($id, $nombre, $descripcion, $token)
+    {
+        try {
+            $validacion = $this->verificarAcceso($token);
+            if (!$validacion['exito']) {
+                return [
+                    'exito' => false,
+                    'msj' => $validacion['msj'],
+                    'codigo' => $validacion['codigo']
+                ];
+            }
+
+            $data = parent::editar($id, $nombre, $descripcion);
+            
+            if ($data) {
+                return [
+                    "exito" => true,
+                    "msj" => "Categoria actualizada exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "Error al actualizar la categoria"
+                ];
+            }
+
+        } catch (Exception $e) {
+            error_log("Error en actualizar categoria: " . $e->getMessage());
             return [
                 "exito" => false,
                 "msj" => "Error interno del servidor"
@@ -197,6 +233,14 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $id = $_POST['id'] ?? '';
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 $respuesta = $cat->eliminarCategoria($id, $token);
+            break;
+
+            case 'actualizar':
+                $id = $_POST['id'] ?? '';
+                $nombre = $_POST['nombre'] ?? '';
+                $token = $_POST['token'] ?? $_GET['token'] ?? '';
+                $descripcion = $_POST['descripcion'] ?? '';
+                $respuesta = $cat->editarCategoria($id, $nombre, $descripcion, $token);
             break;
 
             default:
