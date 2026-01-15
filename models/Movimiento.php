@@ -231,6 +231,80 @@ class Movimiento {
             return false;
         }
     }
+
+    public function obtenerInfoReporte($datos){
+        // Construir consulta con filtros
+        $query = "SELECT 
+                    m.*,
+                    e.nombre as etiqueta_nombre,
+                    c.nombre as categoria_nombre,
+                    u.username as usuario_nombre,
+                    p.nombre as proyecto_nombre,
+                    DATE_FORMAT(m.fecha_movimiento, '%d/%m/%Y %H:%i') as fecha_formateada
+                FROM movimientos_inventario m
+                LEFT JOIN etiquetas e ON m.etiqueta_id = e.id
+                LEFT JOIN categorias c ON e.categoria_id = c.id
+                LEFT JOIN usuarios u ON m.usuario_id = u.id
+                LEFT JOIN proyectos p ON m.cod_proyecto = p.codigo
+                WHERE 1=1";
+        
+        $params = [];
+        
+        // Filtrar por rango de fechas (si no es todo el historial)
+        if (!($datos['todo_historial'] ?? false)) {
+            $fecha_desde = $datos['fecha_desde'] ?? date('Y-m-01');
+            $fecha_hasta = $datos['fecha_hasta'] ?? date('Y-m-d');
+            
+            $query .= " AND DATE(m.fecha_movimiento) BETWEEN :desde AND :hasta";
+            $params[":desde"] = $fecha_desde;
+            $params[":hasta"] = $fecha_hasta;
+        }
+        
+        // Filtrar por tipo de movimiento
+        if (!empty($datos['tipo_movimiento'])) {
+            $query .= " AND m.tipo = :tipo";
+            $params[":tipo"] = $datos['tipo_movimiento'];
+        }
+        
+        // Filtrar por etiqueta específica
+        if (!empty($datos['etiqueta_id'])) {
+            $query .= " AND m.etiqueta_id = :id_etiqueta";
+            $params[":id_etiqueta"] = $datos['etiqueta_id'];
+        }
+        
+        // Filtrar por usuario
+        if (!empty($datos['usuario_id'])) {
+            $query .= " AND m.usuario_id = :id_usuario";
+            $params[":id_usuario"] = $datos['usuario_id'];
+        }
+        
+        // Filtrar por cantidad mínima
+        if (!empty($datos['cantidad_minima'])) {
+            $query .= " AND m.cantidad >= :cant_minima";
+            $params[":cant_minima"] = $datos['cantidad_minima'];
+        }
+        
+        // Ordenar según selección
+        $orden_por = $datos['orden_por'] ?? 'fecha';
+        $orden_direccion = $datos['orden_direccion'] ?? 'desc';
+        
+        $orden_columnas = [
+            'fecha' => 'm.fecha_movimiento',
+            'etiqueta' => 'e.nombre',
+            'tipo' => 'm.tipo',
+            'cantidad' => 'm.cantidad',
+            'usuario' => 'u.nombre'
+        ];
+        
+        $columna_orden = $orden_columnas[$orden_por] ?? 'm.fecha';
+        $query .= " ORDER BY {$columna_orden} {$orden_direccion}";
+        
+        // Preparar y ejecutar consulta
+        
+        $resultado = $this->conexion->ejecutarConParametros($query, $params);
+        
+        return $resultado->fetchAll(PDO::FETCH_ASSOC);
+    }
     
 }
 ?>

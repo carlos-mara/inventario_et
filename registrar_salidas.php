@@ -330,14 +330,12 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                             <label class="form-label fw-bold">Motivo de Salida *</label>
                                             <select class="form-select" id="motivo" required>
                                                 <option value="">Seleccionar motivo...</option>
-                                                <option value="venta">Venta</option>
                                                 <option value="consumo_interno">Consumo Interno</option>
                                                 <option value="despacho_proyecto">Despacho a Proyecto</option>
                                                 <option value="devolucion_cliente">Devolución a Cliente</option>
                                                 <option value="merma">Merma/Pérdida</option>
                                                 <option value="ajuste_inventario">Ajuste de Inventario</option>
                                                 <option value="transferencia">Transferencia Interna</option>
-                                                <option value="donacion">Donación</option>
                                                 <option value="otros">Otros</option>
                                             </select>
                                         </div>

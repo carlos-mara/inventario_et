@@ -231,9 +231,9 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                         <button class="btn btn-info" onclick="generarReporte()">
                                             <i class="fas fa-file-pdf me-2"></i>Generar Reporte
                                         </button>
-                                        <button class="btn btn-warning" onclick="exportarExcel()">
+                                        <!-- <button class="btn btn-warning" onclick="exportarExcel()">
                                             <i class="fas fa-file-excel me-2"></i>Exportar Excel
-                                        </button>
+                                        </button> -->
                                     </div>
                                 </div>
                             </div>
@@ -250,27 +250,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="tablaMovimientosContainer"></div>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover" id="tablaMovimientos">
-                                            <thead>
-                                                <tr>
-                                                    <th>Fecha</th>
-                                                    <th>Etiqueta</th>
-                                                    <th>Tipo</th>
-                                                    <th>Cantidad</th>
-                                                    <th>Stock Anterior</th>
-                                                    <th>Stock Nuevo</th>
-                                                    <th>Usuario</th>
-                                                    <th>Motivo</th>
-                                                    <th>Acciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="movimientosBody">
-                                                <!-- Los movimientos se cargarán aquí -->
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                    <div id="tablaMovimientosContainer" class="container-fluid"></div>
+                                    
                                     
                                     <!-- Paginación -->
                                     <nav aria-label="Page navigation">
@@ -299,6 +280,192 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">Cerrar</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Generar Reporte -->
+    <!-- Modal para Generar Reporte de Movimientos -->
+    <div class="modal fade" id="modalReporteMovimientos" tabindex="-1" aria-labelledby="modalReporteMovimientosLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalReporteMovimientosLabel">
+                        <i class="fas fa-file-pdf me-2"></i>Generar Reporte de Movimientos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-mdb-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <form id="formReporteMovimientos">
+                    <div class="modal-body">
+                        <!-- Información del Reporte -->
+                        <div class="alert alert-primary mb-4">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="fas fa-info-circle fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Reporte de Movimientos</h6>
+                                    <p class="mb-0 small">Genera un reporte detallado de todos los movimientos de inventario dentro del rango de fechas seleccionado.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Rango de Fechas -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="far fa-calendar-alt me-2"></i>Seleccionar Rango de Fechas
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="fechaDesdeMov" class="form-label fw-semibold">Fecha Desde <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="fechaDesdeMov" name="fecha_desde" 
+                                        value="<?php echo date('Y-m-01'); ?>" required>
+                                    <div class="form-text">Fecha inicial del reporte</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="fechaHastaMov" class="form-label fw-semibold">Fecha Hasta <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="fechaHastaMov" name="fecha_hasta" 
+                                        value="<?php echo date('Y-m-d'); ?>" required>
+                                    <div class="form-text">Fecha final del reporte</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Opción rápido de rangos -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Rangos predefinidos:</label>
+                                <div class="btn-group btn-group-sm d-flex" role="group">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="seleccionarRango('hoy')">Hoy</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="seleccionarRango('ayer')">Ayer</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="seleccionarRango('esta_semana')">Esta Semana</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="seleccionarRango('este_mes')">Este Mes</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="seleccionarRango('mes_anterior')">Mes Anterior</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Opción todo el historial -->
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="todoElHistorialMov">
+                                <label class="form-check-label" for="todoElHistorialMov">
+                                    <strong>Todo el historial</strong> (ignorar rango de fechas)
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Filtros Adicionales -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-filter me-2"></i>Filtros Adicionales
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroTipoMovimiento" class="form-label">Tipo de Movimiento</label>
+                                    <select class="form-select" id="filtroTipoMovimiento" name="tipo_movimiento">
+                                        <option value="">Todos los tipos</option>
+                                        <option value="entrada">Entrada</option>
+                                        <option value="salida">Salida</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroEtiquetaMov" class="form-label">Etiqueta Específica</label>
+                                    <select class="form-select" id="filtroEtiquetaMov" name="etiqueta_id">
+                                        <option value="">Todas las etiquetas</option>
+                                        <!-- Las opciones se cargarán dinámicamente -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroUsuarioMov" class="form-label">Usuario Responsable</label>
+                                    <select class="form-select" id="filtroUsuarioMov" name="usuario_id">
+                                        <option value=""selected>Todos los usuarios</option>
+                                        
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroCantidad" class="form-label">Cantidad Mínima</label>
+                                    <input type="number" class="form-control" id="filtroCantidad" name="cantidad_minima" 
+                                        min="1" placeholder="Ej: 10">
+                                    <div class="form-text">Movimientos con cantidad igual o mayor</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formato y Configuración -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-cog me-2"></i>Configuración del Reporte
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Formato del Reporte</label>
+                                    <div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="formatoMov" id="formatoPDFMov" value="pdf" checked>
+                                            <label class="form-check-label" for="formatoPDFMov">
+                                                <i class="fas fa-file-pdf text-danger me-1"></i>PDF (Recomendado)
+                                            </label>
+                                        </div>
+                                        <!-- <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="formatoMov" id="formatoExcelMov" value="excel">
+                                            <label class="form-check-label" for="formatoExcelMov">
+                                                <i class="fas fa-file-excel text-success me-1"></i>Excel
+                                            </label>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                <!-- Ordenamiento -->
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold">Orden del Reporte</h6>
+                                    <div class="row">
+                                        <div class="">
+                                            <label for="ordenPorMov" class="form-label">Ordenar por</label>
+                                            <select class="form-select" id="ordenPorMov" name="orden_por">
+                                                <option value="fecha" selected>Fecha (Reciente primero)</option>
+                                                <option value="etiqueta">Etiqueta</option>
+                                                <option value="tipo">Tipo de Movimiento</option>
+                                                <option value="cantidad">Cantidad</option>
+                                                <option value="usuario">Usuario</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+
+                        <!-- Vista Previa del Rango -->
+                        <div class="alert alert-info mb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-calendar-check fa-2x"></i>
+                                </div>
+                                <div>
+                                    <strong>Resumen del reporte:</strong>
+                                    <div id="resumenReporteMov" class="mt-1">
+                                        Generando reporte de movimientos del <?php echo date('Y-m-01'); ?> al <?php echo date('Y-m-d'); ?>
+                                    </div>
+                                    <div class="mt-1 small text-muted" id="detalleReporteMov">
+                                        Incluye todos los tipos de movimiento y todas las etiquetas
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="mostrarVistaPreviaMovimientos()">
+                            <i class="fas fa-eye me-1"></i>Vista Previa
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="generarReporteMovimientos()">
+                            <i class="fas fa-file-download me-1"></i>Generar Reporte
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -334,6 +501,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     movimientos = result.data;
 
                     grid = new gridjs.Grid({
+                        width: '100%',
                         columns: [
                             
                             {
@@ -971,8 +1139,15 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         }
 
         function generarReporte() {
-            alert('Generando reporte PDF...');
-            // Implementar generación de PDF
+            const modalElement = document.getElementById('modalReporteMovimientos');
+            if (modalElement) {
+                const modal = new mdb.Modal(modalElement);
+                modal.show();
+                
+                // Inicializar eventos después de abrir el modal
+                /* inicializarEventosReporte();
+                actualizarResumenReporte(); */
+            }
         }
 
         function exportarExcel() {
@@ -985,6 +1160,449 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             localStorage.removeItem('user');
             window.location.href = 'cerrar_sesion.php';
         }
+
+        // Función para abrir el modal de movimientos
+function abrirModalReporteMovimientos() {
+    const modalElement = document.getElementById('modalReporteMovimientos');
+    if (modalElement) {
+        const modal = new mdb.Modal(modalElement);
+        modal.show();
+        
+        // Inicializar eventos después de abrir el modal
+        inicializarEventosReporteMovimientos();
+        actualizarResumenReporteMovimientos();
+        
+        // Cargar etiquetas dinámicamente si es necesario
+        cargarEtiquetasParaReporte();
+    }
+}
+
+// Inicializar eventos del modal de movimientos
+function inicializarEventosReporteMovimientos() {
+    // Checkbox "Todo el historial"
+    const todoHistorial = document.getElementById('todoElHistorialMov');
+    const fechaDesde = document.getElementById('fechaDesdeMov');
+    const fechaHasta = document.getElementById('fechaHastaMov');
+    
+    if (todoHistorial) {
+        todoHistorial.addEventListener('change', function() {
+            if (this.checked) {
+                fechaDesde.disabled = true;
+                fechaHasta.disabled = true;
+                fechaDesde.required = false;
+                fechaHasta.required = false;
+            } else {
+                fechaDesde.disabled = false;
+                fechaHasta.disabled = false;
+                fechaDesde.required = true;
+                fechaHasta.required = true;
+            }
+            actualizarResumenReporteMovimientos();
+        });
+    }
+
+    // Actualizar resumen cuando cambien los campos
+    const campos = ['fecha_desde', 'fecha_hasta', 'tipo_movimiento', 'etiqueta_id', 'usuario_id', 'formatoMov', 'orden_por', 'orden_direccion'];
+    campos.forEach(campo => {
+        const elemento = document.querySelector(`[name="${campo}"]`);
+        if (elemento) {
+            elemento.addEventListener('change', actualizarResumenReporteMovimientos);
+        }
+    });
+
+    // Validar fechas
+    if (fechaDesde && fechaHasta) {
+        fechaDesde.addEventListener('change', validarFechasMovimientos);
+        fechaHasta.addEventListener('change', validarFechasMovimientos);
+        fechaDesde.addEventListener('change', actualizarResumenReporteMovimientos);
+        fechaHasta.addEventListener('change', actualizarResumenReporteMovimientos);
+    }
+
+    // Checkboxes de opciones
+    const checkboxes = ['incluirResumen', 'agruparPorEtiqueta', 'mostrarTotales'];
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', actualizarResumenReporteMovimientos);
+        }
+    });
+
+    // Campo de cantidad mínima
+    const cantidadMin = document.getElementById('filtroCantidad');
+    if (cantidadMin) {
+        cantidadMin.addEventListener('input', actualizarResumenReporteMovimientos);
+    }
+}
+
+// Función para seleccionar rangos predefinidos
+function seleccionarRango(tipo) {
+    const fechaDesde = document.getElementById('fechaDesdeMov');
+    const fechaHasta = document.getElementById('fechaHastaMov');
+    const hoy = new Date();
+    
+    let inicio, fin;
+    
+    switch(tipo) {
+        case 'hoy':
+            inicio = hoy;
+            fin = hoy;
+            break;
+        case 'ayer':
+            const ayer = new Date(hoy);
+            ayer.setDate(hoy.getDate() - 1);
+            inicio = ayer;
+            fin = ayer;
+            break;
+        case 'esta_semana':
+            inicio = new Date(hoy);
+            inicio.setDate(hoy.getDate() - hoy.getDay()); // Domingo de esta semana
+            fin = new Date(hoy);
+            fin.setDate(hoy.getDate() + (6 - hoy.getDay())); // Sábado de esta semana
+            break;
+        case 'este_mes':
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            break;
+        case 'mes_anterior':
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+            fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+            break;
+        default:
+            return;
+    }
+    
+    // Desmarcar "todo el historial" si está marcado
+    const todoHistorial = document.getElementById('todoElHistorialMov');
+    if (todoHistorial) {
+        todoHistorial.checked = false;
+        todoHistorial.dispatchEvent(new Event('change'));
+    }
+    
+    // Formatear fechas como YYYY-MM-DD
+    fechaDesde.value = inicio.toISOString().split('T')[0];
+    fechaHasta.value = fin.toISOString().split('T')[0];
+    
+    // Actualizar resumen
+    actualizarResumenReporteMovimientos();
+}
+
+// Actualizar resumen del reporte de movimientos
+function actualizarResumenReporteMovimientos() {
+    const fechaDesde = document.getElementById('fechaDesdeMov').value;
+    const fechaHasta = document.getElementById('fechaHastaMov').value;
+    const todoHistorial = document.getElementById('todoElHistorialMov')?.checked;
+    const tipoMovimiento = document.getElementById('filtroTipoMovimiento').value;
+    const etiqueta = document.getElementById('filtroEtiquetaMov').value;
+    const usuario = document.getElementById('filtroUsuarioMov').value;
+    const cantidadMin = document.getElementById('filtroCantidad').value;
+    const formato = document.querySelector('input[name="formatoMov"]:checked').value;
+    const incluirResumen = document.getElementById('incluirResumen')?.checked;
+    const agruparEtiqueta = document.getElementById('agruparPorEtiqueta')?.checked;
+    const mostrarTotales = document.getElementById('mostrarTotales')?.checked;
+    
+    // Construir resumen principal
+    let resumen = 'Reporte de movimientos ';
+    
+    if (todoHistorial) {
+        resumen += '(todo el historial)';
+    } else {
+        resumen += `del ${fechaDesde} al ${fechaHasta}`;
+    }
+    
+    resumen += ` en formato ${formato.toUpperCase()}`;
+    
+    // Construir detalles
+    let detalles = [];
+    
+    if (tipoMovimiento) {
+        const tipoText = document.querySelector(`#filtroTipoMovimiento option[value="${tipoMovimiento}"]`).textContent;
+        detalles.push(`Tipo: ${tipoText}`);
+    }
+    
+    if (etiqueta) {
+        const etiquetaText = document.querySelector(`#filtroEtiquetaMov option[value="${etiqueta}"]`)?.textContent || 'Etiqueta específica';
+        detalles.push(`Etiqueta: ${etiquetaText}`);
+    }
+    
+    if (usuario) {
+        const usuarioText = document.querySelector(`#filtroUsuarioMov option[value="${usuario}"]`)?.textContent || 'Usuario específico';
+        detalles.push(`Usuario: ${usuarioText}`);
+    }
+    
+    if (cantidadMin) {
+        detalles.push(`Cantidad mínima: ${cantidadMin}`);
+    }
+    
+    if (incluirResumen) detalles.push('Con resumen estadístico');
+    if (agruparEtiqueta) detalles.push('Agrupado por etiqueta');
+    if (mostrarTotales) detalles.push('Con totales por tipo');
+    
+    // Actualizar en el modal
+    const resumenElement = document.getElementById('resumenReporteMov');
+    const detalleElement = document.getElementById('detalleReporteMov');
+    
+    if (resumenElement) {
+        resumenElement.textContent = resumen;
+    }
+    
+    if (detalleElement) {
+        if (detalles.length > 0) {
+            detalleElement.textContent = detalles.join(' • ');
+        } else {
+            detalleElement.textContent = 'Incluye todos los tipos de movimiento y todas las etiquetas';
+        }
+    }
+}
+
+// Validar fechas para movimientos
+function validarFechasMovimientos() {
+    const fechaDesde = document.getElementById('fechaDesdeMov');
+    const fechaHasta = document.getElementById('fechaHastaMov');
+    const todoHistorial = document.getElementById('todoElHistorialMov')?.checked;
+    
+    if (todoHistorial) return true;
+    
+    if (fechaDesde.value && fechaHasta.value) {
+        if (new Date(fechaDesde.value) > new Date(fechaHasta.value)) {
+            fechaDesde.setCustomValidity('La fecha desde no puede ser mayor que la fecha hasta');
+            fechaHasta.setCustomValidity('La fecha hasta no puede ser menor que la fecha desde');
+            return false;
+        } else {
+            fechaDesde.setCustomValidity('');
+            fechaHasta.setCustomValidity('');
+        }
+    }
+    return true;
+}
+
+// Cargar etiquetas para el select (opcional)
+async function cargarEtiquetasParaReporte() {
+    const selectEtiquetas = document.getElementById('filtroEtiquetaMov');
+    if (!selectEtiquetas || selectEtiquetas.options.length > 1) return; // Ya está cargado
+    
+    try {
+        const formData = new FormData();
+        formData.append('peticion', 'listar_simple');
+        formData.append('token', authToken);
+
+        const response = await fetch('controllers/etiquetas.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.exito) {
+            // Agregar opciones de etiquetas
+            result.data.forEach(etiqueta => {
+                const option = document.createElement('option');
+                option.value = etiqueta.id;
+                option.textContent = `${etiqueta.nombre} (${etiqueta.stock_total} uds)`;
+                selectEtiquetas.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error cargando etiquetas:', error);
+    }
+}
+
+// Mostrar vista previa para movimientos
+function mostrarVistaPreviaMovimientos() {
+    if (!validarFechasMovimientos()) {
+        mostrarMensaje('warning', 'Por favor corrige las fechas');
+        return;
+    }
+    
+    Swal.fire({
+        title: 'Vista Previa del Reporte',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-exchange-alt fa-4x text-primary mb-3"></i>
+                <h6 class="mb-2">Reporte de Movimientos</h6>
+                <div class="alert alert-info text-start mb-3">
+                    <div><strong>Rango:</strong> ${document.getElementById('fechaDesdeMov').value} a ${document.getElementById('fechaHastaMov').value}</div>
+                    <div class="mt-1"><strong>Formato:</strong> ${document.querySelector('input[name="formatoMov"]:checked').value.toUpperCase()}</div>
+                    <div class="mt-1"><strong>Filtros aplicados:</strong> 
+                        ${document.getElementById('filtroTipoMovimiento').value ? 'Tipo específico' : 'Todos los tipos'} | 
+                        ${document.getElementById('filtroEtiquetaMov').value ? 'Etiqueta específica' : 'Todas las etiquetas'}
+                    </div>
+                </div>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    Esta es una vista previa. El reporte final incluirá todos los datos detallados.
+                </div>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Continuar',
+        showCancelButton: true,
+        cancelButtonText: 'Ajustar'
+    });
+}
+
+// Función principal para generar reporte de movimientos
+// Función principal para generar reporte de movimientos
+async function generarReporteMovimientos() {
+    if (!validarFechasMovimientos()) {
+        mostrarMensaje('warning', 'Por favor corrige las fechas');
+        return;
+    }
+    
+    // Obtener todos los datos del formulario
+    const datos = {
+        token: authToken,
+        fecha_desde: document.getElementById('fechaDesdeMov').value,
+        fecha_hasta: document.getElementById('fechaHastaMov').value,
+        todo_historial: document.getElementById('todoElHistorialMov')?.checked || false,
+        tipo_movimiento: document.getElementById('filtroTipoMovimiento').value,
+        etiqueta_id: document.getElementById('filtroEtiquetaMov').value,
+        usuario_id: document.getElementById('filtroUsuarioMov').value,
+        cantidad_minima: document.getElementById('filtroCantidad').value,
+        formato: document.querySelector('input[name="formatoMov"]:checked').value,
+        orden_por: document.getElementById('ordenPorMov').value,
+    };
+    
+    // Mostrar carga
+    Swal.fire({
+        title: 'Generando Reporte',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <p>Procesando movimientos...</p>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">Esto puede tardar unos segundos</small>
+            </div>
+        `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    try {
+        // Enviar datos al controlador
+        const response = await fetch('controllers/movimientos.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                peticion: 'generar_reporte',
+                ...datos
+            })
+        });
+        
+        const result = await response.json();
+        
+        Swal.close();
+        
+        if (result.exito) {
+            if (result.archivo) {
+                // Si se generó un archivo, mostrar opción de descarga
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Reporte Generado!',
+                    html: `
+                        <div class="text-center">
+                            <i class="fas fa-file-download fa-3x text-success mb-3"></i>
+                            <h6 class="mb-2">Reporte de Movimientos Generado</h6>
+                            <div class="alert alert-info text-start">
+                                <div><strong>Archivo:</strong> ${result.nombre_archivo || 'reporte.pdf'}</div>
+                                <div class="mt-1"><strong>Tamaño:</strong> ${Math.round((result.tamano || 0) / 1024)} KB</div>
+                                <div class="mt-1"><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</div>
+                            </div>
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="${result.archivo}" class="btn btn-primary" download="${result.nombre_archivo || 'reporte.pdf'}">
+                                    <i class="fas fa-download me-2"></i>Descargar Reporte
+                                </a>
+                                <button class="btn btn-outline-secondary" onclick="Swal.close()">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    `,
+                    showConfirmButton: false
+                });
+            } else {
+                // Si solo devolvió datos
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Datos Obtenidos',
+                    html: `
+                        <div class="text-center">
+                            <p>Se obtuvieron ${result.data?.total_movimientos || 0} movimientos</p>
+                            <button class="btn btn-primary" onclick="verDatosReporte(${JSON.stringify(result.data).replace(/"/g, '&quot;')})">
+                                Ver Datos
+                            </button>
+                        </div>
+                    `,
+                    showConfirmButton: true
+                });
+            }
+            
+            // Cerrar el modal
+            const modalElement = document.getElementById('modalReporteMovimientos');
+            if (modalElement) {
+                const modal = mdb.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+            }
+            
+        } else {
+            throw new Error(result.msj || 'Error generando reporte');
+        }
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte: ' + error.message
+        });
+    }
+}
+
+// Función para ver datos del reporte (opcional)
+function verDatosReporte(datos) {
+    console.log('Datos del reporte:', datos);
+    // Aquí puedes mostrar los datos en una tabla o modal
+    mostrarDatosEnTabla(datos.movimientos);
+}
+
+// Función para descargar el reporte (simulada)
+function descargarReporteMovimientos() {
+    mostrarMensaje('info', 'En producción, aquí se descargaría el archivo del reporte');
+}
+
+// Agregar botón de reporte en la página de movimientos
+function agregarBotonReporteMovimientos() {
+    const cardHeader = document.querySelector('.card-header');
+    if (cardHeader && !document.getElementById('btnReporteMovimientos')) {
+        const botonHTML = `
+            <button class="btn btn-primary btn-sm ms-2" id="btnReporteMovimientos" onclick="abrirModalReporteMovimientos()">
+                <i class="fas fa-file-pdf me-1"></i>Generar Reporte
+            </button>
+        `;
+        
+        // Insertar en el card-header
+        const existingBtn = cardHeader.querySelector('button:last-child');
+        if (existingBtn) {
+            existingBtn.insertAdjacentHTML('afterend', botonHTML);
+        } else {
+            cardHeader.insertAdjacentHTML('beforeend', botonHTML);
+        }
+    }
+}
+
+// Inicializar al cargar la página de movimientos
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si estamos en la página de movimientos
+    if (window.location.pathname.includes('movimientos')) {
+        setTimeout(agregarBotonReporteMovimientos, 500);
+    }
+});
     </script>
 </body>
 </html>

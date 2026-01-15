@@ -296,7 +296,234 @@ class MovimientosControllers extends Movimiento
         }
     }
 
-    
+    // Agrega este método dentro de la clase MovimientosControllers
+    public function generarReporteMovimientos($datos)
+    {
+        try {
+            $validacion = $this->verificarAcceso($datos['token'] ?? '');
+            if (!$validacion['exito']) {
+                return $validacion;
+            }
+
+            $result = parent::obtenerInfoReporte($datos);
+            
+            $movimientos = [];
+            $total_entradas = 0;
+            $total_salidas = 0;
+            $total_cantidad = 0;
+            
+            foreach ($result as $row) {
+                $movimientos[] = $row;
+                
+                // Calcular totales
+                if ($row['tipo'] === 'entrada') {
+                    $total_entradas += $row['cantidad'];
+                } elseif ($row['tipo'] === 'salida') {
+                    $total_salidas += $row['cantidad'];
+                }
+                $total_cantidad += $row['cantidad'];
+            }
+            
+            return [
+                "exito" => true,
+                "data" => [
+                    "movimientos" => $movimientos,
+                    "total_entradas" => $total_entradas,
+                    "total_salidas" => $total_salidas,
+                    "total_movimientos" => count($movimientos),
+                    "total_cantidad" => $total_cantidad,
+                    "filtros" => $datos
+                ]
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error en generarReporteMovimientos: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error generando reporte: " . $e->getMessage()
+            ];
+        }
+    }
+
+    // Agrega este método para generar PDF (requiere TCPDF o similar)
+    public function generarPDF($datos_reporte)
+    {
+        try {
+            // Incluir TCPDF (descárgalo de https://github.com/tecnickcom/TCPDF)
+            require_once('../lib/tcpdf/tcpdf.php');
+            
+            $datos = $datos_reporte['data'];
+            $filtros = $datos['filtros'];
+            
+            // Crear nuevo PDF
+            $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+            
+            $yInicio = 55;
+            $xIzquierda = 15;
+            $anchoCol = 130;
+            $xDerecha = 155;
+            
+            // Configurar documento
+            $pdf->SetCreator('Sistema de Inventarios');
+            $pdf->SetAuthor('Sistema de Inventarios');
+            $pdf->SetTitle('Reporte de Movimientos');
+            $pdf->SetSubject('Reporte de Movimientos de Inventario');
+            
+            // Agregar página
+            $pdf->AddPage();
+            
+            // Configurar márgenes
+            $pdf->SetMargins(15, 25, 15);
+            
+            // Logo (opcional)
+            $logo_path = '../img/icon-512x512.png';
+            if (file_exists($logo_path)) {
+                $pdf->Image($logo_path, 15, 15, 30, '', 'PNG', '', 'T', false, 300, '', false, false, 0, false, false, false);
+            }
+            
+            // Título
+            $pdf->SetFont('helvetica', 'B', 16);
+            $pdf->SetXY(50, 20);
+            $pdf->Cell(0, 0, 'REPORTE DE MOVIMIENTOS DE INVENTARIO', 0, 1, 'C');
+            
+            // Información de la empresa
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->SetXY(15, 45);
+            $pdf->Cell(0, 0, 'Sistema de Inventarios - ' . date('d/m/Y H:i:s'), 0, 1);
+            
+            // Información del reporte
+            $pdf->SetFont('helvetica', 'B', 11);
+            $pdf->SetXY($xIzquierda, $yInicio);
+            $pdf->Cell($anchoCol, 6, 'Parámetros del Reporte:', 0, 1);
+            
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->SetX($xIzquierda);
+            
+            $periodo = $filtros['todo_historial'] ? 
+                'Todo el historial' : 
+                "Del {$filtros['fecha_desde']} al {$filtros['fecha_hasta']}";
+            
+            $info = [
+                "Período: " . $periodo,
+                "Tipo de movimiento: " . ($filtros['tipo_movimiento'] ?: 'Todos'),
+                "Formato: " . strtoupper($filtros['formato']),
+                "Ordenado por: " . $filtros['orden_por'],
+                "Total movimientos: " . $datos['total_movimientos'],
+                "Fecha generación: " . date('d/m/Y H:i:s')
+            ];
+            
+            foreach ($info as $line) {
+                $pdf->Cell($anchoCol, 5, $line, 0, 'L');
+            }
+            $yFinIzq = $pdf->GetY();
+            
+            // Resumen estadístico
+            $pdf->SetFont('helvetica', 'B', 11);
+            $pdf->SetXY($xDerecha, $yInicio);
+            $pdf->Cell($anchoCol, 6, 'Resumen Estadístico:', 0, 1);
+            
+            $pdf->SetFont('helvetica', '', 10);
+            $pdf->SetX($xDerecha);
+            
+            $resumen = [
+                "Total entradas: " . number_format($datos['total_entradas'], 0, ',', '.'),
+                "Total salidas: " . number_format($datos['total_salidas'], 0, ',', '.'),
+                "Diferencia neta: " . number_format($datos['total_entradas'] - $datos['total_salidas'], 0, ',', '.'),
+                "Total movimientos registrados: " . $datos['total_movimientos']
+            ];
+            
+            foreach ($resumen as $line) {
+                $pdf->SetX($xDerecha);
+                $pdf->MultiCell($anchoCol, 5, $line, 0, 'L');
+            }
+            $yFinDer = $pdf->GetY();
+            // Tabla de movimientos
+            $yTabla = max($yFinIzq, $yFinDer) + 8;
+            $pdf->SetY($yTabla);
+            /* $pdf->SetY(115); */
+            $pdf->SetFont('helvetica', 'B', 9);
+            
+            // Encabezados de tabla
+            $headers = ['#', 'Fecha', 'Etiqueta', 'Tipo', 'Cantidad', 'Motivo', 'Usuario', 'Observaciones'];
+            $widths = [10, 25, 65, 20, 10, 40, 30, 68];
+            $pdf->SetTextColor(255, 255, 255);  // Blanco (texto)
+            for ($i = 0; $i < count($headers); $i++) {
+                $pdf->Cell($widths[$i], 7, $headers[$i], 1, 0, 'C', 1);
+            }
+            $pdf->Ln();
+            
+            // Datos de la tabla
+            $pdf->SetFont('helvetica', '', 8);
+            $contador = 1;
+            /* $pdf->SetTextColor(0, 0, 0); */
+            foreach ($datos['movimientos'] as $movimiento) {
+                // Control de página
+                if ($pdf->GetY() > 180) {
+                    $pdf->AddPage();
+                    // Repetir encabezados
+                    $pdf->SetFont('helvetica', 'B', 9);
+                    for ($i = 0; $i < count($headers); $i++) {
+                        $pdf->Cell($widths[$i], 7, $headers[$i], 1, 0, 'C', 1);
+                    }
+                    $pdf->Ln();
+                    $pdf->SetFont('helvetica', '', 8);
+                }
+                
+                /* $tipo_color = $movimiento['tipo'] === 'entrada' ? '0,128,0' : '255,0,0'; */
+                if ($movimiento['tipo'] === 'entrada') {
+                    $pdf->SetTextColor(0, 128, 0); // verde
+                } else {
+                    $pdf->SetTextColor(255, 0, 0); // rojo
+                }
+                /* $pdf->SetTextColor(0, 0, 0); */
+                
+                $pdf->Cell($widths[0], 6, $contador, 1, 0, 'C');
+                $pdf->Cell($widths[1], 6, $movimiento['fecha_formateada'], 1, 0, 'C');
+                $pdf->Cell($widths[2], 6, substr($movimiento['etiqueta_nombre'], 0, 25), 1, 0, 'C');
+                $pdf->Cell($widths[3], 6, strtoupper($movimiento['tipo']), 1, 0, 'C');
+                $pdf->Cell($widths[4], 6, number_format($movimiento['cantidad'], 0, ',', '.'), 1, 0, 'C');
+                $pdf->Cell($widths[5], 6, substr($movimiento['motivo'] ?? '', 0, 20), 1, 0, 'C');
+                $pdf->Cell($widths[6], 6, substr($movimiento['usuario_nombre'] ?? '', 0, 15), 1, 0, 'C');
+                $pdf->Cell($widths[7], 6, substr($movimiento['observaciones'] ?? '', 0, 25), 1, 0, 'C');
+                
+                $pdf->Ln();
+                $pdf->SetTextColor(0, 0, 0);
+                $contador++;
+            }
+            
+            // Pie de página
+            /* $pdf->SetY(max($yFinIzq, $yFinDer));
+            $pdf->SetFont('helvetica', 'I', 8);
+            $pdf->Cell(0, 10, 'Página ' . $pdf->getAliasNumPage() . ' de ' . $pdf->getAliasNbPages(), 0, 0, 'C'); */
+            
+            // Generar nombre de archivo
+            $nombre_archivo = 'reporte_movimientos_' . date('Ymd_His') . '.pdf';
+            $directorio = __DIR__ . '/../reportes/movimientos';
+            
+            // Crear directorio si no existe
+            if (!file_exists('../reportes/movimientos')) {
+                mkdir('../reportes/movimientos', 0777, true);
+            }
+            $ruta_archivo = $directorio . '/' . $nombre_archivo;
+            // Guardar PDF
+            $pdf->Output($ruta_archivo, 'F');
+            
+            return [
+                "exito" => true,
+                "archivo" => 'reportes/' . $nombre_archivo,
+                "nombre_archivo" => $nombre_archivo,
+                "ruta_completa" => $ruta_archivo
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Error generando PDF: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error generando PDF: " . $e->getMessage()
+            ];
+        }
+    }
+
 }
 
 // =============================================
@@ -479,6 +706,51 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 }
                 
                 $respuesta = $mov->anularMovimiento($token, $movimiento_id, $motivo_anulacion);
+            break;
+
+            case 'generar_reporte':
+                // Obtener datos del reporte (pueden venir como JSON)
+                $input = json_decode(file_get_contents('php://input'), true);
+                if (!$input) {
+                    $input = $_POST;
+                }
+
+                $datos_reporte = [
+                    'token' => $input['token'] ?? $_POST['token'] ?? '',
+                    'fecha_desde' => $input['fecha_desde'] ?? $_POST['fecha_desde'] ?? date('Y-m-01'),
+                    'fecha_hasta' => $input['fecha_hasta'] ?? $_POST['fecha_hasta'] ?? date('Y-m-d'),
+                    'todo_historial' => filter_var($input['todo_historial'] ?? $_POST['todo_historial'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    'tipo_movimiento' => $input['tipo_movimiento'] ?? $_POST['tipo_movimiento'] ?? '',
+                    'etiqueta_id' => $input['etiqueta_id'] ?? $_POST['etiqueta_id'] ?? '',
+                    'usuario_id' => $input['usuario_id'] ?? $_POST['usuario_id'] ?? '',
+                    'cantidad_minima' => $input['cantidad_minima'] ?? $_POST['cantidad_minima'] ?? '',
+                    'formato' => $input['formato'] ?? $_POST['formato'] ?? 'pdf',
+                    'orden_por' => $input['orden_por'] ?? $_POST['orden_por'] ?? 'fecha',
+                    'orden_direccion' => $input['orden_direccion'] ?? $_POST['orden_direccion'] ?? 'desc'
+                ];
+
+                // Primero obtener los datos del reporte
+                $resultado_datos = $mov->generarReporteMovimientos($datos_reporte);
+
+                if (!$resultado_datos['exito']) {
+                    $respuesta = $resultado_datos;
+                    break;
+                }
+                
+                // Si el formato es PDF, generar PDF
+                if ($datos_reporte['formato'] === 'pdf') {
+                    $resultado_pdf = $mov->generarPDF($resultado_datos);
+                    $respuesta = $resultado_pdf;
+                } 
+                // Si el formato es Excel (implementar similarmente)
+                elseif ($datos_reporte['formato'] === 'excel') {
+                    $resultado_excel = $mov->generarExcel($resultado_datos);
+                    $respuesta = $resultado_excel;
+                } 
+                // Si solo quiere los datos
+                else {
+                    $respuesta = $resultado_datos;
+                }
             break;
 
             default:
