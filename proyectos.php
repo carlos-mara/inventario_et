@@ -425,6 +425,279 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         </div>
     </div>
 
+    <!-- Modal para Generar Reporte de Proyectos -->
+    <div class="modal fade" id="modalReporteProyectos" tabindex="-1" aria-labelledby="modalReporteProyectosLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalReporteProyectosLabel">
+                        <i class="fas fa-file-pdf me-2"></i>Generar Reporte de Proyectos
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-mdb-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <form id="formReporteProyectos">
+                    <div class="modal-body">
+                        <!-- Información del Reporte -->
+                        <div class="alert alert-primary mb-4">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="fas fa-project-diagram fa-2x"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Reporte de Proyectos</h6>
+                                    <p class="mb-0 small">Genera un reporte detallado de todos los proyectos con información de etiquetas asignadas y estado de entrega.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Reporte -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-chart-bar me-2"></i>Tipo de Reporte
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoReporte" id="reporteGeneral" value="general" checked>
+                                        <label class="form-check-label" for="reporteGeneral">
+                                            <i class="fas fa-list me-2"></i>General
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Resumen de todos los proyectos</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoReporte" id="reporteDetallado" value="detallado">
+                                        <label class="form-check-label" for="reporteDetallado">
+                                            <i class="fas fa-file-alt me-2"></i>Detallado
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Con etiquetas y movimientos</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="tipoReporte" id="reporteEstadistico" value="estadistico">
+                                        <label class="form-check-label" for="reporteEstadistico">
+                                            <i class="fas fa-chart-pie me-2"></i>Estadístico
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Gráficos y métricas</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filtros por Estado -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-filter me-2"></i>Filtrar por Estado
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="filtroActivos" name="estados[]" value="1" checked>
+                                        <label class="form-check-label" for="filtroActivos">
+                                            <span class="badge bg-success">Activos</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="filtroInactivos" name="estados[]" value="2" checked>
+                                        <label class="form-check-label" for="filtroInactivos">
+                                            <span class="badge bg-secondary">Inactivos</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="filtroCompletados" name="estados[]" value="3" checked>
+                                        <label class="form-check-label" for="filtroCompletados">
+                                            <span class="badge bg-warning">Completados</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <!-- <div class="col-md-3 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="filtroConFirma" name="con_firma">
+                                        <label class="form-check-label" for="filtroConFirma">
+                                            <i class="fas fa-signature me-1"></i>Con firma
+                                        </label>
+                                    </div>
+                                </div> -->
+                            </div>
+                        </div>
+
+                        <!-- Rango de Fechas -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="far fa-calendar-alt me-2"></i>Rango de Fechas de Creación
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="fechaDesdeProy" class="form-label">Fecha Desde</label>
+                                    <input type="date" class="form-control" id="fechaDesdeProy" name="fecha_desde" 
+                                        value="<?php echo date('Y-m-01'); ?>">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="fechaHastaProy" class="form-label">Fecha Hasta</label>
+                                    <input type="date" class="form-control" id="fechaHastaProy" name="fecha_hasta" 
+                                        value="<?php echo date('Y-m-d'); ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filtros Adicionales -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Filtros Adicionales</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <!-- <label for="filtroUsuarioProy" class="form-label">Usuario Creador</label> -->
+                                    <select class="form-select" id="filtroUsuarioProy" name="usuario_id" hidden>
+                                        <option value="">Todos los usuarios</option>
+                                        <option value="admin">Administrador</option>
+                                        <option value="proyectos">Gestor de Proyectos</option>
+                                        <option value="almacen">Almacén</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <!-- <label for="filtroEtiquetaProy" class="form-label">Contiene Etiqueta</label> -->
+                                    <select class="form-select" id="filtroEtiquetaProy" name="etiqueta_id" hidden>
+                                        <option value="">Cualquier etiqueta</option>
+                                        <option value="1">Etiquetas Adhesivas</option>
+                                        <option value="2">Etiquetas Térmicas</option>
+                                        <option value="3">Etiquetas RFID</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroMinUnidades" class="form-label">Mínimo Unidades</label>
+                                    <input type="number" class="form-control" id="filtroMinUnidades" name="min_unidades" 
+                                        min="0" placeholder="Ej: 100">
+                                    <div class="form-text">Proyectos con al menos esta cantidad</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="filtroPorcentajeEntrega" class="form-label">% Mínimo de Entrega</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="filtroPorcentajeEntrega" name="porcentaje_entrega" 
+                                            min="0" max="100" placeholder="Ej: 50">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <div class="form-text">Proyectos con al menos este % entregado</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configuración del Reporte -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-cog me-2"></i>Configuración del Reporte
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Formato</label>
+                                    <div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="formatoProy" id="formatoPDFProy" value="pdf" checked>
+                                            <label class="form-check-label" for="formatoPDFProy">
+                                                <i class="fas fa-file-pdf text-danger me-1"></i>PDF
+                                            </label>
+                                        </div>
+                                        <!-- <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="formatoProy" id="formatoExcelProy" value="excel">
+                                            <label class="form-check-label" for="formatoExcelProy">
+                                                <i class="fas fa-file-excel text-success me-1"></i>Excel
+                                            </label>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <!-- <label class="form-label">Opciones de Visualización</label> -->
+                                    <div hidden>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="incluirFotos" name="incluir_fotos" checked>
+                                            <label class="form-check-label" for="incluirFotos">
+                                                Incluir fotos de etiquetas
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="incluirFirmas" name="incluir_firmas">
+                                            <label class="form-check-label" for="incluirFirmas">
+                                                Incluir firmas digitales
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="mostrarPorcentajes" name="mostrar_porcentajes" checked>
+                                            <label class="form-check-label" for="mostrarPorcentajes">
+                                                Mostrar porcentajes de avance
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ordenamiento -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Orden del Reporte</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="ordenPorProy" class="form-label">Ordenar por</label>
+                                    <select class="form-select" id="ordenPorProy" name="orden_por">
+                                        <option value="codigo">Código</option>
+                                        <option value="nombre">Nombre</option>
+                                        <option value="fecha_inicio" selected>Fecha de Inicio</option>
+                                        <option value="estado">Estado</option>
+                                        <option value="total_unidades">Total de Unidades</option>
+                                        <option value="porcentaje_entrega">% de Entrega</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="ordenDireccionProy" class="form-label">Dirección</label>
+                                    <select class="form-select" id="ordenDireccionProy" name="orden_direccion">
+                                        <option value="asc">Ascendente (A-Z)</option>
+                                        <option value="desc" selected>Descendente (Z-A)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resumen del Reporte -->
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-chart-line fa-2x"></i>
+                                </div>
+                                <div>
+                                    <strong>Resumen del reporte:</strong>
+                                    <div id="resumenReporteProy" class="mt-1">
+                                        Reporte general de proyectos en formato PDF
+                                    </div>
+                                    <div class="mt-1 small text-muted" id="detalleReporteProy">
+                                        Incluyendo todos los estados y sin filtros de fecha
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="mostrarVistaPreviaProyectos()">
+                            <i class="fas fa-eye me-1"></i>Vista Previa
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="generarReporteProyectos()">
+                            <i class="fas fa-file-download me-1"></i>Generar Reporte
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MDBootstrap JS -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
@@ -444,7 +717,491 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         let canvas;
         let ctx;
         
+        // Variables para reportes
+let reporteProyectosData = null;
+
+// Función para abrir el modal de reportes de proyectos
+function abrirModalReporteProyectos() {
+    const modalElement = document.getElementById('modalReporteProyectos');
+    if (modalElement) {
+        const modal = new mdb.Modal(modalElement);
+        modal.show();
         
+        // Inicializar eventos después de abrir el modal
+        inicializarEventosReporteProyectos();
+        actualizarResumenReporteProyectos();
+    }
+}
+
+// Inicializar eventos del modal de proyectos
+function inicializarEventosReporteProyectos() {
+    // Actualizar resumen cuando cambien los campos
+    const campos = ['tipoReporte', 'formatoProy', 'usuario_id', 'etiqueta_id', 'orden_por', 'orden_direccion', 'min_unidades', 'porcentaje_entrega'];
+    campos.forEach(campo => {
+        const elementos = document.querySelectorAll(`[name="${campo}"]`);
+        elementos.forEach(elemento => {
+            elemento.addEventListener('change', actualizarResumenReporteProyectos);
+        });
+    });
+
+    // Checkboxes de estados
+    const checkboxesEstados = document.querySelectorAll('[name="estados[]"]');
+    checkboxesEstados.forEach(checkbox => {
+        checkbox.addEventListener('change', actualizarResumenReporteProyectos);
+    });
+
+    // Checkbox de con firma
+    const checkboxFirma = document.getElementById('filtroConFirma');
+    if (checkboxFirma) {
+        checkboxFirma.addEventListener('change', actualizarResumenReporteProyectos);
+    }
+
+    // Checkboxes de opciones
+    const checkboxesOpciones = ['incluirFotos', 'incluirFirmas', 'mostrarPorcentajes'];
+    checkboxesOpciones.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', actualizarResumenReporteProyectos);
+        }
+    });
+
+    // Campos de fecha
+    const fechaDesde = document.getElementById('fechaDesdeProy');
+    const fechaHasta = document.getElementById('fechaHastaProy');
+    if (fechaDesde && fechaHasta) {
+        fechaDesde.addEventListener('change', actualizarResumenReporteProyectos);
+        fechaHasta.addEventListener('change', actualizarResumenReporteProyectos);
+        fechaDesde.addEventListener('change', validarFechasProyectos);
+        fechaHasta.addEventListener('change', validarFechasProyectos);
+    }
+}
+
+// Actualizar resumen del reporte de proyectos
+function actualizarResumenReporteProyectos() {
+    const tipoReporte = document.querySelector('input[name="tipoReporte"]:checked').value;
+    const formato = document.querySelector('input[name="formatoProy"]:checked').value;
+    const fechaDesde = document.getElementById('fechaDesdeProy').value;
+    const fechaHasta = document.getElementById('fechaHastaProy').value;
+    
+    // Obtener estados seleccionados
+    const estadosSeleccionados = [];
+    document.querySelectorAll('[name="estados[]"]:checked').forEach(cb => {
+        estadosSeleccionados.push(cb.value);
+    });
+    
+    const conFirma = document.getElementById('filtroConFirma')?.checked;
+    const usuario = document.getElementById('filtroUsuarioProy').value;
+    const etiqueta = document.getElementById('filtroEtiquetaProy').value;
+    const minUnidades = document.getElementById('filtroMinUnidades').value;
+    const porcentajeEntrega = document.getElementById('filtroPorcentajeEntrega').value;
+    
+    // Construir resumen principal
+    let resumen = '';
+    
+    switch(tipoReporte) {
+        case 'general':
+            resumen = 'Reporte general de proyectos';
+            break;
+        case 'detallado':
+            resumen = 'Reporte detallado de proyectos (con etiquetas)';
+            break;
+        case 'estadistico':
+            resumen = 'Reporte estadístico de proyectos';
+            break;
+    }
+    
+    resumen += ` en formato ${formato.toUpperCase()}`;
+    
+    // Construir detalles
+    let detalles = [];
+    
+    // Rango de fechas
+    if (fechaDesde && fechaHasta) {
+        detalles.push(`Período: ${fechaDesde} a ${fechaHasta}`);
+    }
+    
+    // Estados
+    if (estadosSeleccionados.length > 0 && estadosSeleccionados.length < 3) {
+        const textosEstados = {
+            '1': 'Activos',
+            '2': 'Inactivos',
+            '3': 'Completados'
+        };
+        const estadosTexto = estadosSeleccionados.map(e => textosEstados[e] || e).join(', ');
+        detalles.push(`Estados: ${estadosTexto}`);
+    }
+    
+    if (conFirma) detalles.push('Solo con firma');
+    if (usuario) detalles.push('Usuario específico');
+    if (etiqueta) detalles.push('Etiqueta específica');
+    if (minUnidades) detalles.push(`Mín. ${minUnidades} unidades`);
+    if (porcentajeEntrega) detalles.push(`Mín. ${porcentajeEntrega}% entregado`);
+    
+    // Opciones
+    if (document.getElementById('incluirFotos')?.checked) detalles.push('Con fotos');
+    if (document.getElementById('incluirFirmas')?.checked) detalles.push('Con firmas');
+    if (document.getElementById('mostrarPorcentajes')?.checked) detalles.push('Con % de avance');
+    
+    // Actualizar en el modal
+    const resumenElement = document.getElementById('resumenReporteProy');
+    const detalleElement = document.getElementById('detalleReporteProy');
+    
+    if (resumenElement) {
+        resumenElement.textContent = resumen;
+    }
+    
+    if (detalleElement) {
+        if (detalles.length > 0) {
+            detalleElement.textContent = detalles.join(' • ');
+        } else {
+            detalleElement.textContent = 'Incluyendo todos los proyectos sin filtros específicos';
+        }
+    }
+}
+
+// Validar fechas para proyectos
+function validarFechasProyectos() {
+    const fechaDesde = document.getElementById('fechaDesdeProy');
+    const fechaHasta = document.getElementById('fechaHastaProy');
+    
+    if (fechaDesde.value && fechaHasta.value) {
+        if (new Date(fechaDesde.value) > new Date(fechaHasta.value)) {
+            fechaDesde.setCustomValidity('La fecha desde no puede ser mayor que la fecha hasta');
+            fechaHasta.setCustomValidity('La fecha hasta no puede ser menor que la fecha desde');
+            return false;
+        } else {
+            fechaDesde.setCustomValidity('');
+            fechaHasta.setCustomValidity('');
+        }
+    }
+    return true;
+}
+
+// Mostrar vista previa para proyectos
+function mostrarVistaPreviaProyectos() {
+    if (!validarFechasProyectos()) {
+        mostrarMensaje('warning', 'Por favor corrige las fechas');
+        return;
+    }
+    
+    // Obtener datos del formulario
+    const datos = obtenerDatosReporteProyectos();
+    
+    Swal.fire({
+        title: 'Vista Previa del Reporte',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-project-diagram fa-4x text-primary mb-3"></i>
+                <h6 class="mb-2">Reporte de Proyectos</h6>
+                <div class="alert alert-info text-start mb-3">
+                    <div><strong>Tipo:</strong> ${datos.tipo === 'general' ? 'General' : datos.tipo === 'detallado' ? 'Detallado' : 'Estadístico'}</div>
+                    <div class="mt-1"><strong>Formato:</strong> ${datos.formato.toUpperCase()}</div>
+                    <div class="mt-1"><strong>Estados incluidos:</strong> ${datos.estados.length === 3 ? 'Todos' : datos.estados.join(', ')}</div>
+                    <div class="mt-1"><strong>Rango:</strong> ${datos.fecha_desde} a ${datos.fecha_hasta}</div>
+                    <div class="mt-1"><strong>Filtros:</strong> 
+                        ${datos.con_firma ? 'Con firma | ' : ''}
+                        ${datos.min_unidades ? `Mín. ${datos.min_unidades} unid. | ` : ''}
+                        ${datos.porcentaje_entrega ? `Mín. ${datos.porcentaje_entrega}% | ` : ''}
+                        ${datos.incluir_fotos ? 'Con fotos' : 'Sin fotos'}
+                    </div>
+                </div>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    Esta es una vista previa. El reporte final incluirá todos los proyectos con los datos detallados.
+                </div>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Continuar',
+        showCancelButton: true,
+        cancelButtonText: 'Ajustar',
+        width: 600
+    });
+}
+
+// Obtener datos del formulario de reporte de proyectos
+function obtenerDatosReporteProyectos() {
+    // Obtener estados seleccionados
+    const estadosSeleccionados = [];
+    document.querySelectorAll('[name="estados[]"]:checked').forEach(cb => {
+        estadosSeleccionados.push(parseInt(cb.value));
+    });
+    
+    return {
+        token: authToken,
+        tipo: document.querySelector('input[name="tipoReporte"]:checked').value,
+        fecha_desde: document.getElementById('fechaDesdeProy').value || null,
+        fecha_hasta: document.getElementById('fechaHastaProy').value || null,
+        estados: estadosSeleccionados.length > 0 ? estadosSeleccionados : [1, 2, 3],
+        con_firma: document.getElementById('filtroConFirma')?.checked || false,
+        usuario_id: document.getElementById('filtroUsuarioProy').value || null,
+        etiqueta_id: document.getElementById('filtroEtiquetaProy').value || null,
+        min_unidades: document.getElementById('filtroMinUnidades').value || null,
+        porcentaje_entrega: document.getElementById('filtroPorcentajeEntrega').value || null,
+        formato: document.querySelector('input[name="formatoProy"]:checked').value,
+        incluir_fotos: document.getElementById('incluirFotos')?.checked || false,
+        incluir_firmas: document.getElementById('incluirFirmas')?.checked || false,
+        mostrar_porcentajes: document.getElementById('mostrarPorcentajes')?.checked || false,
+        orden_por: document.getElementById('ordenPorProy').value,
+        orden_direccion: document.getElementById('ordenDireccionProy').value
+    };
+}
+
+// Función principal para generar reporte de proyectos
+async function generarReporteProyectos() {
+    if (!validarFechasProyectos()) {
+        mostrarMensaje('warning', 'Por favor corrige las fechas');
+        return;
+    }
+    
+    // Obtener datos del formulario
+    const datos = obtenerDatosReporteProyectos();
+    
+    // Mostrar carga
+    Swal.fire({
+        title: 'Generando Reporte de Proyectos',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                <p>Recopilando datos de proyectos...</p>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">Esto puede tardar unos segundos</small>
+            </div>
+        `,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    try {
+        // Enviar datos al controlador
+        const response = await fetch('controllers/proyectos.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                peticion: 'generar_reporte',
+                ...datos
+            })
+        });
+        
+        const result = await response.json();
+        console.log('Resultado del reporte de proyectos:', result);
+        Swal.close();
+        
+        if (result.exito) {
+            if (result.archivo) {
+                // Si se generó un archivo, mostrar opción de descarga
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Reporte Generado!',
+                    html: `
+                        <div class="text-center">
+                            <i class="fas fa-file-download fa-3x text-success mb-3"></i>
+                            <h6 class="mb-2">Reporte de Proyectos Generado</h6>
+                            <div class="alert alert-info text-start">
+                                <div><strong>Archivo:</strong> ${result.nombre_archivo || 'reporte_proyectos.pdf'}</div>
+                                <div class="mt-1"><strong>Proyectos incluidos:</strong> ${result.total_proyectos || 0}</div>
+                                <div class="mt-1"><strong>Estados:</strong> ${result.estados_incluidos || 'Todos'}</div>
+                                <div class="mt-1"><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</div>
+                            </div>
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="${result.archivo}" class="btn btn-primary" download="${result.nombre_archivo || 'reporte_proyectos.pdf'}">
+                                    <i class="fas fa-download me-2"></i>Descargar Reporte
+                                </a>
+                                <button class="btn btn-outline-secondary" onclick="Swal.close()">
+                                    Cerrar
+                                </button>
+                            </div>
+                        </div>
+                    `,
+                    showConfirmButton: false,
+                    width: 600
+                });
+            } else if (result.data) {
+                // Si solo devolvió datos (para desarrollo o vista previa)
+                reporteProyectosData = result.data;
+                mostrarResultadoReporteProyectos(result.data);
+            }
+            
+            // Cerrar el modal
+            const modalElement = document.getElementById('modalReporteProyectos');
+            if (modalElement) {
+                const modal = mdb.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+            }
+            
+        } else {
+            throw new Error(result.msj || 'Error generando reporte');
+        }
+        
+    } catch (error) {
+        console.error('Error generando reporte de proyectos:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el reporte: ' + error.message
+        });
+    }
+}
+
+// Mostrar resultado del reporte (versión simplificada)
+function mostrarResultadoReporteProyectos(datos) {
+    const totalProyectos = datos.total_proyectos || datos.proyectos?.length || 0;
+    const totalEtiquetas = datos.total_etiquetas || 0;
+    const totalUnidades = datos.total_unidades || 0;
+    const porcentajePromedio = datos.porcentaje_promedio_entrega || 0;
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Datos del Reporte',
+        html: `
+            <div class="text-center">
+                <i class="fas fa-project-diagram fa-3x text-primary mb-3"></i>
+                <h6 class="mb-3">Resumen del Reporte</h6>
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body py-2">
+                                <h5 class="mb-0">${totalProyectos}</h5>
+                                <small>Proyectos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body py-2">
+                                <h5 class="mb-0">${totalEtiquetas}</h5>
+                                <small>Etiquetas</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body py-2">
+                                <h5 class="mb-0">${totalUnidades.toLocaleString()}</h5>
+                                <small>Unidades</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body py-2">
+                                <h5 class="mb-0">${porcentajePromedio.toFixed(1)}%</h5>
+                                <small>Avance</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary" onclick="verDetallesReporteProyectos()">
+                        <i class="fas fa-list me-2"></i>Ver Detalles
+                    </button>
+                    <button class="btn btn-outline-secondary ms-2" onclick="exportarReporteProyectos()">
+                        <i class="fas fa-download me-2"></i>Exportar
+                    </button>
+                </div>
+            </div>
+        `,
+        showConfirmButton: false,
+        width: 600
+    });
+}
+
+// Ver detalles del reporte
+function verDetallesReporteProyectos() {
+    if (!reporteProyectosData || !reporteProyectosData.proyectos) {
+        mostrarMensaje('info', 'No hay datos de reporte disponibles');
+        return;
+    }
+    
+    const proyectosHTML = reporteProyectosData.proyectos.map((proyecto, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td><strong>${proyecto.codigo}</strong></td>
+            <td>${proyecto.nombre}</td>
+            <td>
+                <span class="badge ${proyecto.estado === 1 ? 'bg-success' : proyecto.estado === 3 ? 'bg-warning' : 'bg-secondary'}">
+                    ${proyecto.estado_nombre || 'N/A'}
+                </span>
+            </td>
+            <td>${proyecto.total_etiquetas || 0}</td>
+            <td>${proyecto.total_unidades || 0}</td>
+            <td>${proyecto.unidades_entregadas || 0}</td>
+            <td>
+                <span class="badge ${proyecto.porcentaje_entrega >= 100 ? 'bg-success' : proyecto.porcentaje_entrega >= 50 ? 'bg-warning' : 'bg-danger'}">
+                    ${proyecto.porcentaje_entrega || 0}%
+                </span>
+            </td>
+        </tr>
+    `).join('');
+    
+    Swal.fire({
+        title: 'Detalles del Reporte',
+        html: `
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                            <th>Etiquetas</th>
+                            <th>Total Unid.</th>
+                            <th>Entregadas</th>
+                            <th>% Entrega</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${proyectosHTML}
+                    </tbody>
+                </table>
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        width: 900
+    });
+}
+
+// Exportar reporte (simulación)
+function exportarReporteProyectos() {
+    mostrarMensaje('info', 'En producción, esta función exportaría el reporte en el formato seleccionado');
+}
+
+// Agregar botón de reporte en la página de proyectos
+function agregarBotonReporteProyectos() {
+    const cardHeader = document.querySelector('.card-header');
+    if (cardHeader && !document.getElementById('btnReporteProyectos')) {
+        const botonHTML = `
+            <button class="btn btn-primary btn-sm ms-2" id="btnReporteProyectos" onclick="abrirModalReporteProyectos()">
+                <i class="fas fa-file-pdf me-1"></i>Generar Reporte
+            </button>
+        `;
+        
+        // Insertar después del botón "Nuevo Proyecto"
+        const btnNuevoProyecto = cardHeader.querySelector('a[href="nuevo-proyecto.php"]');
+        if (btnNuevoProyecto) {
+            btnNuevoProyecto.insertAdjacentHTML('afterend', botonHTML);
+        } else {
+            cardHeader.insertAdjacentHTML('beforeend', botonHTML);
+        }
+    }
+}
+
+// Inicializar al cargar la página de proyectos
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si estamos en la página de proyectos
+    if (window.location.pathname.includes('proyectos')) {
+        setTimeout(agregarBotonReporteProyectos, 500);
+    }
+});
 
         // Implementación personalizada de firma
         function inicializarSignaturePad() {

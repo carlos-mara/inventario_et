@@ -45,7 +45,7 @@ class Proyecto {
     public function listarProyectos() {
         $sql = "SELECT 
                     p.*,
-                    u.username as usuario_nombre,
+                    u.nombre_completo as usuario_nombre,
                     COUNT(pe.id) as total_etiquetas,
                     COALESCE(SUM(pe.cantidad), 0) as total_unidades
                 FROM proyectos p
@@ -121,7 +121,7 @@ class Proyecto {
         $sql = "SELECT 
                     p.*,
                     e.nombre as estado_nombre,
-                    u.username as usuario_nombre,
+                    u.nombre_completo as usuario_nombre,
                     COUNT(pe.id) as total_etiquetas,
                     COALESCE(SUM(pe.cantidad), 0) as total_unidades
                 FROM proyectos p
@@ -140,7 +140,7 @@ class Proyecto {
     public function listarProyectosCompleto() {
         $sql = "SELECT 
                     p.*,
-                    u.nombre as usuario_nombre,
+                    u.nombre_completo as usuario_nombre,
                     pe.id as pe_id,
                     pe.alto,
                     pe.ancho,
@@ -152,7 +152,7 @@ class Proyecto {
                     c.nombre as categoria_nombre,
                     et.stock_actual
                 FROM proyectos p
-                LEFT JOIN usuarios u ON p.usuario_id = u.id
+                LEFT JOIN usuarios u ON p.usuario_create = u.id
                 LEFT JOIN proyecto_etiquetas pe ON p.id = pe.id_proyecto
                 LEFT JOIN etiquetas e ON pe.id_etiqueta = e.id
                 LEFT JOIN categorias c ON e.categoria_id = c.id
@@ -392,5 +392,292 @@ class Proyecto {
             return false;
         }
     }
+
+    public function obtenerInfoReporte($datos) {
+        
+        try {
+            $query = "SELECT 
+                        p.*,
+                        u.nombre_completo as usuario_nombre,
+                        e.nombre as estado_nombre,
+                        COUNT(DISTINCT pe.id_etiqueta) as total_etiquetas,
+                        SUM(pe.cantidad) as total_unidades,
+                        SUM(pe.cantidad_entregada) as unidades_entregadas,
+                        ROUND(
+                            CASE 
+                                WHEN SUM(pe.cantidad) > 0 
+                                THEN (SUM(pe.cantidad_entregada) * 100.0 / SUM(pe.cantidad)) 
+                                ELSE 0 
+                            END, 2
+                        ) as porcentaje_entrega
+                      FROM proyectos p
+                      LEFT JOIN usuarios u ON p.usuario_create = u.id
+                      LEFT JOIN estados e ON p.estado = e.id
+                      LEFT JOIN proyecto_etiquetas pe ON p.id = pe.id_proyecto
+                      WHERE 1=1";
+            
+            $params = [];
+            $types = '';
+            
+            // Filtrar por estados
+            if (!empty($datos['estados']) && is_array($datos['estados'])) {
+                $placeholders = "";
+                foreach ($datos['estados'] as $index => $estado) {
+                    $params[":".$estado] = $estado;
+                    $placeholders .= ":".$estado;
+                    if ($index < count($datos['estados']) - 1) {
+                        $placeholders .= ",";
+                    }
+                }
+
+                
+                $query .= " AND p.estado IN ($placeholders)";
+                /* $params = array_merge($params, $datos['estados']);
+                $types .= str_repeat('i', count($datos['estados'])); */
+            }
+            
+            // Filtrar por rango de fechas
+            if (!empty($datos['fecha_desde']) && !empty($datos['fecha_hasta'])) {
+                $query .= " AND DATE(p.fecha_create) BETWEEN :desde AND :hasta";
+                $params[":desde"] = $datos['fecha_desde'];
+                $params[":hasta"] = $datos['fecha_hasta'];
+                $types .= 'ss';
+            }
+            
+            // Filtrar por usuario creador
+            
+            if (!empty($datos['usuario_id']) && $datos['usuario_id'] !== 'null') {
+                $query .= " AND p.usuario_create = :usuario_id";
+                $params[":usuario_id"] = $datos['usuario_id'];
+                $types .= 's';
+            }
+            
+            // Filtrar por etiqueta específica
+            if (!empty($datos['etiqueta_id']) && $datos['etiqueta_id'] !== 'null') {
+                $query .= " AND EXISTS (
+                    SELECT 1 FROM proyecto_etiquetas pe2 
+                    WHERE pe2.id_proyecto = p.id 
+                    AND pe2.etiqueta_id = :etiqueta_id
+                )";
+                $params[":etiqueta_id"] = $datos['etiqueta_id'];
+                $types .= 'i';
+            }
+            
+            // Filtrar por proyectos con firma
+            if (!empty($datos['con_firma']) && $datos['con_firma'] !== 'null') {
+                $query .= " AND EXISTS (
+                    SELECT 1 FROM proyecto_firmas fp 
+                    WHERE fp.id_proyecto = p.codigo
+                )";
+            }
+            
+            // Agrupar por proyecto
+            $query .= " GROUP BY p.codigo";
+            
+            // Filtrar por cantidad mínima de unidades
+            if (!empty($datos['min_unidades']) && $datos['min_unidades'] !== 'null') {
+                $query .= " HAVING total_unidades >= :min_unidades";
+                $params[":min_unidades"] = $datos['min_unidades'];
+                $types .= 'i';
+            }
+            
+            // Filtrar por porcentaje mínimo de entrega
+            if (!empty($datos['porcentaje_entrega']) && $datos['porcentaje_entrega'] !== 'null') {
+                $query .= " HAVING porcentaje_entrega >= :porcentaje_entrega";
+                $params[":porcentaje_entrega"] = $datos['porcentaje_entrega'];
+                $types .= 'i';
+            }
+            
+            // Ordenar según selección
+            $orden_por = $datos['orden_por'] ?? 'fecha_inicio';
+            $orden_direccion = $datos['orden_direccion'] ?? 'desc';
+            
+            $orden_columnas = [
+                'codigo' => 'p.codigo',
+                'nombre' => 'p.nombre',
+                'fecha_inicio' => 'p.fecha_inicio',
+                'fecha_create' => 'p.fecha_create',
+                'estado' => 'p.estado',
+                'total_unidades' => 'total_unidades',
+                'porcentaje_entrega' => 'porcentaje_entrega'
+            ];
+            
+            $columna_orden = $orden_columnas[$orden_por] ?? 'p.fecha_create';
+            $query .= " ORDER BY {$columna_orden} {$orden_direccion}";
+            /* print_r($query);exit; */
+            // Preparar y ejecutar consulta
+            if (!empty($params)) {
+                $result = $this->conexion->ejecutarConParametros($query, $params);
+                return $result->fetchAll(PDO::FETCH_ASSOC);
+            } 
+            
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerInfoReporte: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /* public function obtenerEtiquetasProyecto($cod_proyecto) {
+        try {
+            $query = "SELECT 
+                        pe.*,
+                        e.nombre as etiqueta_nombre,
+                        e.codigo as etiqueta_codigo,
+                        e.foto_url,
+                        e.stock_total as stock_actual,
+                        c.nombre as categoria_nombre,
+                        te.alto,
+                        te.ancho,
+                        ROUND(
+                            CASE 
+                                WHEN pe.cantidad > 0 
+                                THEN (pe.cantidad_entregada * 100.0 / pe.cantidad) 
+                                ELSE 0 
+                            END, 2
+                        ) as porcentaje_entrega
+                      FROM proyecto_etiquetas pe
+                      JOIN etiquetas e ON pe.etiqueta_id = e.id
+                      LEFT JOIN categorias c ON e.categoria_id = c.id
+                      LEFT JOIN tamanos_etiquetas te ON pe.tamano_id = te.id
+                      WHERE pe.cod_proyecto = ?
+                      ORDER BY e.nombre";
+            
+            $stmt = $this->conexion->prepare($query);
+            $stmt->bind_param('s', $cod_proyecto);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            
+            $etiquetas = [];
+            while ($row = $result->fetch_assoc()) {
+                $etiquetas[] = $row;
+            }
+            
+            $stmt->close();
+            return $etiquetas;
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerEtiquetasProyecto: " . $e->getMessage());
+            throw $e;
+        }
+    } */
+    
+    public function obtenerFirmasProyecto($id_proyecto) {
+        try {
+            $parametros = [
+                ':id_proyecto' => $id_proyecto
+            ];
+            $query = "SELECT * FROM proyecto_firmas
+                      WHERE id_proyecto = :id_proyecto
+                      ORDER BY fecha DESC";
+            
+            $result = $this->conexion->ejecutarConParametros($query, $parametros);
+            
+            
+            return $result->fetchAll(PDO::FETCH_ASSOC);
+            
+            
+        } catch (Exception $e) {
+            error_log("Error en obtenerFirmasProyecto: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    public function obtenerTotalEstadisticas($datos) {
+    try {
+        // Primero crear una subconsulta para obtener los proyectos filtrados
+        $subquery = "SELECT 
+                        p.id,
+                        p.codigo,
+                        p.estado,
+                        SUM(pe.cantidad) as total_unidades_proyecto,
+                        SUM(pe.cantidad_entregada) as total_entregadas_proyecto,
+                        CASE 
+                            WHEN SUM(pe.cantidad) > 0 
+                            THEN (SUM(pe.cantidad_entregada) * 100.0 / SUM(pe.cantidad))
+                            ELSE 0 
+                        END as porcentaje_entrega_proyecto
+                     FROM proyectos p
+                     LEFT JOIN proyecto_etiquetas pe ON p.id = pe.id_proyecto
+                     WHERE 1=1";
+        
+        $params = [];
+        
+        // Aplicar filtros básicos en la subconsulta
+        if (!empty($datos['estados']) && is_array($datos['estados'])) {
+            $placeholders = "";
+            foreach ($datos['estados'] as $index => $estado) {
+                $params[":estado_" . $index] = $estado;
+                $placeholders .= ":estado_" . $index;
+                if ($index < count($datos['estados']) - 1) {
+                    $placeholders .= ",";
+                }
+            }
+            $subquery .= " AND p.estado IN ($placeholders)";
+        }
+        
+        if (!empty($datos['fecha_desde']) && !empty($datos['fecha_hasta'])) {
+            $subquery .= " AND DATE(p.fecha_create) BETWEEN :desde AND :hasta";
+            $params[":desde"] = $datos['fecha_desde'];
+            $params[":hasta"] = $datos['fecha_hasta'];
+        }
+        
+        if (!empty($datos['usuario_id']) && $datos['usuario_id'] !== 'null') {
+            $subquery .= " AND p.usuario_create = :usuario_id";
+            $params[":usuario_id"] = $datos['usuario_id'];
+        }
+        
+        if (!empty($datos['etiqueta_id']) && $datos['etiqueta_id'] !== 'null') {
+            $subquery .= " AND EXISTS (
+                SELECT 1 FROM proyecto_etiquetas pe2 
+                WHERE pe2.id_proyecto = p.id 
+                AND pe2.id_etiqueta = :etiqueta_id
+            )";
+            $params[":etiqueta_id"] = $datos['etiqueta_id'];
+        }
+        
+        if (!empty($datos['con_firma'])) {
+            $subquery .= " AND EXISTS (
+                SELECT 1 FROM proyecto_firmas fp 
+                WHERE fp.id_proyecto = p.id
+            )";
+        }
+        
+        // Agrupar por proyecto en la subconsulta
+        $subquery .= " GROUP BY p.id";
+        
+        // Consulta principal que filtra desde la subconsulta
+        $query = "SELECT 
+                    COUNT(*) as total_proyectos,
+                    SUM(total_unidades_proyecto) as total_unidades,
+                    SUM(total_entregadas_proyecto) as total_entregadas,
+                    AVG(porcentaje_entrega_proyecto) as porcentaje_promedio_entrega,
+                    SUM(CASE WHEN estado = 1 THEN 1 ELSE 0 END) as proyectos_activos,
+                    SUM(CASE WHEN estado = 2 THEN 1 ELSE 0 END) as proyectos_inactivos,
+                    SUM(CASE WHEN estado = 3 THEN 1 ELSE 0 END) as proyectos_completados
+                  FROM ($subquery) as proyectos_filtrados
+                  WHERE 1=1";
+        
+        // Aplicar filtros HAVING en la consulta principal
+        if (!empty($datos['min_unidades']) && $datos['min_unidades'] !== 'null') {
+            $query .= " AND total_unidades_proyecto >= :min_unidades";
+            $params[":min_unidades"] = $datos['min_unidades'];
+        }
+        
+        if (!empty($datos['porcentaje_entrega']) && $datos['porcentaje_entrega'] !== 'null') {
+            $query .= " AND porcentaje_entrega_proyecto >= :porcentaje_entrega";
+            $params[":porcentaje_entrega"] = $datos['porcentaje_entrega'];
+        }
+        
+        // Ejecutar la consulta
+        $result = $this->conexion->ejecutarConParametros($query, $params);
+        return $result->fetch(PDO::FETCH_ASSOC) ?: [];
+        
+    } catch (Exception $e) {
+        error_log("Error en obtenerTotalEstadisticas: " . $e->getMessage());
+        throw $e;
+    }
+}
+
 }
 ?>
