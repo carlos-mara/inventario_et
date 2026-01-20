@@ -18,6 +18,10 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     exit;
 }
 
+require_once 'models/Usuario.php';
+$usuarioModel = new Usuario();
+$datosUsuario = $usuarioModel->obtener($_SESSION['usuario']['id']);
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -157,27 +161,27 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                     <form id="formPerfil">
                                                         <div class="row mb-3">
                                                             <div class="col-md-6">
-                                                                <div class="form-outline">
-                                                                    <input type="text" id="profileNombre" class="form-control" required />
+                                                                <div class="form-outline" data-mdb-input-init>
+                                                                    <input type="text" id="profileNombre" class="form-control active" required value="<?php echo $datosUsuario["nombre_completo"] ?>" />
                                                                     <label class="form-label" for="profileNombre">Nombre Completo *</label>
                                                                 </div>
                                                             </div>
-                                                            <div class="col-md-6">
-                                                                <div class="form-outline">
-                                                                    <input type="email" id="profileEmail" class="form-control" required />
+                                                            <div class="col-md-6 mb-3">
+                                                                <div class="form-outline" data-mdb-input-init>
+                                                                    <input type="email" id="profileEmail" class="form-control active" required value="<?php echo $datosUsuario["email"] ?>"/>
                                                                     <label class="form-label" for="profileEmail">Email *</label>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         <div class="row mb-3">
-                                                            <div class="col-md-6">
-                                                                <div class="form-outline">
-                                                                    <input type="text" id="profileUsername" class="form-control" required />
+                                                            <div class="col-md-6 mb-3">
+                                                                <div class="form-outline" data-mdb-input-init>
+                                                                    <input type="text" id="profileUsername" class="form-control active" required value="<?php echo $datosUsuario["username"] ?>"/>
                                                                     <label class="form-label" for="profileUsername">Nombre de Usuario *</label>
                                                                 </div>
                                                             </div>
-                                                            <div class="col-md-6">
-                                                                <div class="form-outline">
+                                                            <div class="col-md-6 mb-3">
+                                                                <div class="form-outline" >
                                                                     <select class="form-select" id="profileRol" disabled>
                                                                         <option value="admin">Administrador</option>
                                                                         <option value="gestor">Gestor</option>
@@ -194,21 +198,16 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                         </div>
                                                         <div id="cambioPassword" class="d-none">
                                                             <div class="row mb-3">
-                                                                <div class="col-md-4">
-                                                                    <div class="form-outline">
-                                                                        <input type="password" id="currentPassword" class="form-control" />
-                                                                        <label class="form-label" for="currentPassword">Contraseña Actual</label>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-4">
-                                                                    <div class="form-outline">
-                                                                        <input type="password" id="newPassword" class="form-control" />
+                                                                
+                                                                <div class="col-md-6">
+                                                                    <div class="form-outline" data-mdb-input-init>
+                                                                        <input type="password" id="newPassword" class="form-control active" />
                                                                         <label class="form-label" for="newPassword">Nueva Contraseña</label>
                                                                     </div>
                                                                 </div>
-                                                                <div class="col-md-4">
-                                                                    <div class="form-outline">
-                                                                        <input type="password" id="confirmPassword" class="form-control" />
+                                                                <div class="col-md-6">
+                                                                    <div class="form-outline" data-mdb-input-init>
+                                                                        <input type="password" id="confirmPassword" class="form-control active" />
                                                                         <label class="form-label" for="confirmPassword">Confirmar Contraseña</label>
                                                                     </div>
                                                                 </div>
@@ -425,6 +424,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/9.2.0/mdb.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let userData = null;
         let authToken = null;
@@ -436,14 +436,82 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 document.getElementById('dropdownUserName').textContent = userData.nombre_completo;
                 
                 // Llenar formulario de perfil
-                document.getElementById('profileNombre').value = userData.nombre_completo;
-                document.getElementById('profileEmail').value = userData.email;
-                document.getElementById('profileUsername').value = userData.username;
+                /* document.getElementById('profileNombre').value = userData.nombre_completo; */
+                /* document.getElementById('profileEmail').value = userData.email;
+                document.getElementById('profileUsername').value = userData.username; */
                 document.getElementById('profileRol').value = userData.rol;
             }
         }
 
-        
+        document.getElementById('formPerfil').addEventListener('submit', function (event) {
+            actualizarPerfil(event);
+        });
+
+        async function actualizarPerfil(event) {
+            event.preventDefault();
+
+            let nombre = document.getElementById('profileNombre').value;
+            let email = document.getElementById('profileEmail').value;
+            let username = document.getElementById('profileUsername').value;
+            let newPassword = document.getElementById('newPassword').value;
+            let confirmPassword = document.getElementById('confirmPassword').value;
+            
+            
+            // Validaciones básicas
+            if (newPassword || confirmPassword) {
+                if (newPassword !== confirmPassword) {
+                    mostrarMensaje('error', 'La nueva contraseña y su confirmación no coinciden.');
+                    return;
+                }
+            }
+
+            try {
+
+                const formData = new FormData();
+                formData.append('peticion', 'actualizar');
+                formData.append('token', authToken);
+                formData.append('id', userData.id);
+                formData.append('nombre', nombre);
+                formData.append('email', email);
+                formData.append('username', username);
+                formData.append('newPassword', newPassword);
+                formData.append('confirmPassword', confirmPassword);
+
+                const response = await fetch('controllers/auth.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.exito) {
+                    mostrarMensaje('success', 'Usuario actualizado exitosamente');
+                    /* recargar pagina despues de dos segundos*/
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+
+                } else {
+                    throw new Error(result.msj);
+                }
+            } catch (error) {
+                console.error('Error actualizando categoría:', error);
+                mostrarMensaje('error', error.message || 'Error al actualizar la categoría');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function mostrarMensaje(tipo, mensaje) {
+            Swal.fire({
+                icon: tipo,
+                title: mensaje,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
 
         function toggleCambioPassword() {
             const div = document.getElementById('cambioPassword');

@@ -170,11 +170,11 @@ class Usuario {
                 $campos[] = "activo = :activo";
                 $parametros[':activo'] = $datos['activo'];
             }
-            
+            /* print_r($datos);exit; */
             // Si se proporciona nueva contraseña, hashearla
-            if (isset($datos['password']) && !empty($datos['password'])) {
+            if (isset($datos['newPassword']) && !empty($datos['newPassword'])) {
                 $campos[] = "password_hash = :password_hash";
-                $parametros[':password_hash'] = password_hash($datos['password'], PASSWORD_DEFAULT);
+                $parametros[':password_hash'] = password_hash($datos['newPassword'], PASSWORD_DEFAULT);
             }
             
             if (empty($campos)) {

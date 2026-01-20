@@ -119,6 +119,48 @@ class AuthController extends Usuario
             "msj" => "Sesión cerrada exitosamente"
         ];
     }
+
+    public function actualizarPerfil($datos)
+    {
+        try {
+            // Validar datos requeridos
+            if (empty($datos['id']) || empty($datos['nombre']) || empty($datos['email']) || empty($datos['username'])) {
+                return [
+                    "exito" => false,
+                    "msj" => "Faltan datos requeridos"
+                ];
+            }
+
+            if ($datos['newPassword'] !== $datos['confirmPassword']) {
+                return [
+                    "exito" => false,
+                    "msj" => "La nueva contraseña y su confirmación no coinciden"
+                ];
+            }
+
+            // Actualizar perfil
+            $exito = $this->actualizar($datos['id'], $datos);
+
+            if ($exito) {
+                return [
+                    "exito" => true,
+                    "msj" => "Perfil actualizado exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "Error actualizando perfil"
+                ];
+            }
+
+        } catch (Exception $e) {
+            error_log("Error en actualizarPerfil: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
 }
 
 // =============================================
@@ -186,14 +228,38 @@ if (isset($_POST["peticion"])) {
                         "msj" => "Error creando usuario"
                     ];
                 }
-                break;
+            break;
+
+            case 'actualizar':
+                $datos = [
+                    'id' => $_POST['id'] ?? '',
+                    'nombre' => $_POST['nombre'] ?? '',
+                    'email' => $_POST['email'] ?? '',
+                    'username' => $_POST['username'] ?? '',
+                    'password' => $_POST['password'] ?? '',
+                    'newPassword' => $_POST['newPassword'] ?? '',
+                    'confirmPassword' => $_POST['confirmPassword'] ?? ''
+                ];
+                $exito = $ctl->actualizarPerfil($datos);
+                if ($exito['exito']) {
+                    $respuesta = [
+                        "exito" => true,
+                        "msj" => "Perfil actualizado exitosamente"
+                    ];
+                } else {
+                    $respuesta = [
+                        "exito" => false,
+                        "msj" => $exito['msj']
+                    ];
+                }
+            break;
 
             default:
                 $respuesta = [
                     "exito" => false,
                     "msj" => "Petición no reconocida: " . $peticion
                 ];
-                break;
+            break;
         }
 
     } catch (Exception $e) {
