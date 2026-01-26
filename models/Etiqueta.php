@@ -277,24 +277,48 @@ class Etiqueta {
     }
 
     /**
- * Elimina tamaños específicos por IDs
- */
-public function eliminarTamanosPorIds($ids_tamanos)
-{
-    try {
-        if (empty($ids_tamanos)) {
+     * Elimina tamaños específicos por IDs
+     */
+    public function eliminarTamanosPorIds($ids_tamanos)
+    {
+        try {
+            if (empty($ids_tamanos)) {
+                return true;
+            }
+            
+            $sql = "DELETE FROM etiqueta_tamanos WHERE id = :id";
+            
+            $this->conexion->ejecutarConParametros($sql, $ids_tamanos);
             return true;
+            
+        } catch (Exception $e) {
+            error_log("Error eliminando tamaños por IDs: " . $e->getMessage());
+            return false;
         }
-        
-        $sql = "DELETE FROM etiqueta_tamanos WHERE id = :id";
-        
-        $this->conexion->ejecutarConParametros($sql, $ids_tamanos);
-        return true;
-        
-    } catch (Exception $e) {
-        error_log("Error eliminando tamaños por IDs: " . $e->getMessage());
-        return false;
     }
-}
+
+    
+    public function consultaTamanosPorProyectoEtiqueta($proyecto_id, $etiqueta_id)
+    {
+        $params = [
+            ':proyecto_id' => $proyecto_id,
+            ':etiqueta_id' => $etiqueta_id
+        ];
+        
+        try {
+            $sql = "SELECT pe.*, et.stock_actual
+                    FROM proyecto_etiquetas pe
+                    INNER JOIN etiqueta_tamanos et ON pe.id_tamano = et.id
+                    WHERE pe.id_proyecto = :proyecto_id AND pe.id_etiqueta = :etiqueta_id";
+                    
+            $resultado = $this->conexion->ejecutarConParametros($sql, $params);
+            return $resultado->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log("Error en consultaTamanosPorProyectoEtiqueta: " . $e->getMessage());
+            return [];
+        }
+    }
+
 }
 ?>

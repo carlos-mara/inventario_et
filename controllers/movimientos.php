@@ -673,6 +673,57 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $respuesta = $resultado;
             break;
 
+            case 'registrar_salidas_multiples':
+                $salidas = json_decode($_POST['items'] ?? '[]', true);
+                $token = $_POST['token'] ?? null;
+                $motivo          = $_POST['motivo'] ?? null;
+                $referencia      = $_POST['referencia'] ?? null;
+                $observaciones   = $_POST['observaciones'] ?? null;
+                $cod_proyecto    = $_POST['proyecto_id'] ?? null;
+                $usuario_id      = $_POST['usuario_id'] ?? null;
+                $fecha           = date('Y-m-d H:i:s');
+                $resultados = [];
+                $foto_base64     = $_POST['foto_base64'] ?? null;
+                
+                // Guardar foto si existe
+                $foto_url = null;
+                if (!empty($salida['foto_base64'])) {
+                    $foto_url = guardarFotoBase64($foto_base64, $fecha, 'salida');
+                }
+                foreach ($salidas as $salida) {
+                    
+
+                    $resultado = $mov->movimiento(
+                        $token,
+                        $salida['etiqueta_id'],
+                        'salida',
+                        $salida['cantidad'],
+                        $salida['alto'],
+                        $salida['ancho'],
+                        $salida['tamano_id'],
+                        0,
+                        $motivo ?? null,
+                        $referencia ?? null,
+                        $observaciones ?? null,
+                        0,
+                        0,
+                        $cod_proyecto ?? null,
+                        $usuario_id,
+                        $fecha,
+                        $foto_url
+                    );
+                    $resultados[] = [
+                        'etiqueta_id' => $salida['etiqueta_id'],
+                        'resultado' => $resultado
+                    ];
+                }
+                
+                $respuesta = [
+                    "exito" => true,
+                    "resultados" => $resultados
+                ];
+            break;
+
             case 'historial':
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 if(isset($_POST['fecha'])){
@@ -743,10 +794,10 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                     $respuesta = $resultado_pdf;
                 } 
                 // Si el formato es Excel (implementar similarmente)
-                elseif ($datos_reporte['formato'] === 'excel') {
+                /* elseif ($datos_reporte['formato'] === 'excel') {
                     $resultado_excel = $mov->generarExcel($resultado_datos);
                     $respuesta = $resultado_excel;
-                } 
+                }  */
                 // Si solo quiere los datos
                 else {
                     $respuesta = $resultado_datos;

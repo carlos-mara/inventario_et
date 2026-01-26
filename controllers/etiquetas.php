@@ -487,6 +487,29 @@ public function editarEtiqueta($id, $nombre, $descripcion, $foto, $stock_minimo,
             ];
         }
     }
+
+    public function obtenerTamanosPorProyectoEtiqueta($proyecto_id, $etiqueta_id, $token)
+    {
+        try {
+            $validacion = $this->verificarAcceso($token);
+            if (!$validacion['exito']) {
+                return $validacion;
+            }
+
+            $tamanos = parent::consultaTamanosPorProyectoEtiqueta($proyecto_id, $etiqueta_id);
+
+            return [
+                "exito" => true,
+                "tamanos" => $tamanos
+            ];
+        } catch (Exception $e) {
+            error_log("Error en obtenerTamanosPorProyectoEtiqueta: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error obteniendo los tamaños"
+            ];
+        }
+    }
 }
 
 // =============================================
@@ -617,6 +640,23 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
 
                 $respuesta = $et->obtenerTamanos($etiqueta_id, $token);
+            break;
+
+            
+            case 'consultar_tamanos_por_proyecto':
+                $token = $_POST['token'] ?? $_GET['token'] ?? '';
+                $proyecto_id = $_POST['proyecto_id'] ?? $_GET['proyecto_id'] ?? null;
+                $etiqueta_id = $_POST['etiqueta_id'] ?? $_GET['etiqueta_id'] ?? null;
+
+                if (empty($proyecto_id) || empty($etiqueta_id)) {
+                    $respuesta = [
+                        "exito" => false,
+                        "msj" => "ID de proyecto y etiqueta son requeridos"
+                    ];
+                    break;
+                }
+                $tamanos = $et->obtenerTamanosPorProyectoEtiqueta($proyecto_id, $etiqueta_id, $token);
+                $respuesta = $tamanos;
             break;
 
             default:
