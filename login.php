@@ -1,3 +1,13 @@
+<?php
+session_start();
+// 1. Si no hay usuario pero viene token, crearlo
+$sesion = false;
+if (isset($_SESSION['usuario'])) {
+    $sesion = true;
+}else {
+    $sesion = false;
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -128,7 +138,7 @@
         const btnSpinner = document.getElementById('btnSpinner');
         const errorAlert = document.getElementById('errorAlert');
         const errorText = document.getElementById('errorText');
-
+        const sesion = <?php echo json_encode($sesion); ?>;
         // =============================================
         // FUNCIONES DE UTILIDAD
         // =============================================
@@ -301,7 +311,18 @@
         function checkExistingAuth() {
             console.log('🔍 Verificando autenticación existente...');
             
-            const token = localStorage.getItem('auth_token');
+            console.log(sesion);
+            let token = localStorage.getItem('auth_token');
+            if (!sesion) {
+                /* eliminar token */
+                if (token) {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    token = null;
+                }
+                
+            }
+            
             if (token) {
                 console.log('🎯 Usuario ya autenticado, redirigiendo...');
                 

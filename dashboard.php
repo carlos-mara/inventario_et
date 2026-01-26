@@ -1,147 +1,23 @@
 <?php
 session_start();
+// 1. Si no hay usuario pero viene token, crearlo
 
-// EXTENDER VIDA DE LA SESIÓN (añade esto al inicio)
-ini_set('session.gc_maxlifetime', 86400); // 24 horas
-ini_set('session.cookie_lifetime', 86400); // Cookie por 24 horas
-
-// Configurar cookie de sesión persistente
-setcookie(
-    session_name(), 
-    session_id(), 
-    time() + 86400, // 24 horas
-    "/",            // Ruta raíz
-    "",             // Dominio (actual)
-    isset($_SERVER["HTTPS"]), // Secure si es HTTPS
-    true            // HttpOnly
-);
-
-// DEBUG: Verificar estado actual
-error_log("DEBUG: SESSION ID: " . session_id());
-error_log("DEBUG: SESSION usuario = " . print_r($_SESSION['usuario'] ?? 'NO EXISTE', true));
-error_log("DEBUG: POST token = " . ($_POST['token'] ?? 'NO EXISTE'));
-error_log("DEBUG: Cookie PHPSESSID = " . ($_COOKIE[session_name()] ?? 'NO EXISTE'));
-
-// 1. Si hay token en POST, crear sesión
-if (isset($_POST['token'])) {
-    require_once 'middleware/AuthMiddleware.php';
+if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
+    require_once 'AuthMiddleware.php';
     $auth = new AuthMiddleware();
     $usuario = $auth->crearSesionDesdeToken($_POST['token']);
     
     if ($usuario) {
         $_SESSION['usuario'] = $usuario;
-        $_SESSION['last_activity'] = time(); // Marcar actividad
-        
-        // Guardar también en cookie como backup
-        setcookie('user_backup', json_encode($usuario), time() + 86400, "/");
-        
-        error_log("DEBUG: Sesión creada para: " . ($usuario['email'] ?? ''));
-        
-        // Si es petición AJAX, responder éxito
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'reload' => true]);
-            exit;
-        }
-    } else {
-        error_log("ERROR: Token inválido o expirado");
     }
+}elseif($_SESSION['usuario']['rol'] == "admin"){
+    $tieneAcceso = true;
+}else {
+    echo "<h1>Usuario: ".$_SESSION['usuario']."</h1>";
+    echo "<h1>Acceso denegado</h1>";
+    echo '<a href="login.php">Volver a iniciar sesión</a>';
+    exit;
 }
-
-// 2. Verificar acceso
-$tieneAcceso = false;
-if (isset($_SESSION['usuario'])) {
-    $rol = $_SESSION['usuario']['rol'] ?? '';
-    if ($rol == "admin" || $rol == "proyectos") {
-        $tieneAcceso = true;
-        $_SESSION['last_activity'] = time(); // Actualizar actividad
-    }
-}
-
-// 3. Si no tiene acceso, mostrar error
-if (!$tieneAcceso) {
-    // Intentar restaurar desde cookie de backup
-    if (isset($_COOKIE['user_backup'])) {
-        $backupUser = json_decode($_COOKIE['user_backup'], true);
-        if ($backupUser && ($backupUser['rol'] == "admin" || $backupUser['rol'] == "proyectos")) {
-            $_SESSION['usuario'] = $backupUser;
-            $tieneAcceso = true;
-            error_log("DEBUG: Sesión restaurada desde cookie backup");
-        }
-    }
-    
-    // Si aún no tiene acceso, mostrar error
-    if (!$tieneAcceso) {
-        // Si es una petición AJAX/fetch, responder JSON
-        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) || 
-            (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)) {
-            header('Content-Type: application/json');
-            echo json_encode(['error' => 'Acceso denegado', 'needs_token' => true, 'redirect' => 'login.php']);
-            exit;
-        }
-        
-        // Si es navegación normal, mostrar HTML con script para enviar token
-        ?>
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Restaurando sesión...</title>
-            <script>
-            // Intentar restaurar sesión automáticamente
-            document.addEventListener('DOMContentLoaded', function() {
-                const token = localStorage.getItem('auth_token');
-                if (token) {
-                    console.log('🔑 Token encontrado, enviando al servidor...');
-                    
-                    const formData = new FormData();
-                    formData.append('token', token);
-                    
-                    fetch(window.location.href, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            console.log('✅ Sesión restaurada, recargando...');
-                            window.location.reload();
-                        } else {
-                            console.error('❌ Error restaurando sesión');
-                            window.location.href = 'login.php';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        window.location.href = 'login.php';
-                    });
-                } else {
-                    console.warn('No hay token en localStorage');
-                    window.location.href = 'login.php';
-                }
-            });
-            </script>
-        </head>
-        <body>
-            <div style="text-align: center; margin-top: 100px;">
-                <h2>Restaurando tu sesión...</h2>
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="mt-3">Por favor espera un momento.</p>
-            </div>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-}
-
-// 4. Para debug en HTML
-echo "<!-- DEBUG: Acceso permitido para " . ($_SESSION['usuario']['email'] ?? '') . " -->";
-echo "<!-- DEBUG: Session ID: " . session_id() . " -->";
 ?>
 
 <!DOCTYPE html>
@@ -432,29 +308,38 @@ echo "<!-- DEBUG: Session ID: " . session_id() . " -->";
     
     <script src="js/script.js"></script>
     <script>
-        // =============================================
+// =============================================
 // CLASE DE AUTENTICACIÓN MEJORADA
 // =============================================
 class AuthManager {
     constructor() {
         this.tokenKey = 'auth_token';
         this.userKey = 'user';
-        this.maxRetries = 2;
+        this.maxRetries = 1; // Reducir intentos para evitar bucles
+        this.retryCount = 0;
     }
     
     async restorePHPSession() {
-        const token = localStorage.getItem(this.tokenKey);
-        const user = localStorage.getItem(this.userKey);
+        // Si ya intentamos demasiadas veces, ir a login
+        if (this.retryCount >= this.maxRetries) {
+            console.error('Demasiados intentos, redirigiendo a login');
+            window.location.href = 'login.php';
+            return { success: false };
+        }
         
-        if (!token || !user) {
-            console.warn('No hay token o usuario en localStorage');
+        this.retryCount++;
+        
+        const token = localStorage.getItem(this.tokenKey);
+        console.log(token);
+        
+        if (!token) {
+            console.warn('No hay token en localStorage');
             return { success: false, redirect: 'login.php' };
         }
         
         try {
-            console.log('🔄 Intentando restaurar sesión PHP...');
+            console.log(`🔄 Intento ${this.retryCount} de restaurar sesión`);
             
-            // Enviar token al servidor
             const formData = new FormData();
             formData.append('token', token);
             
@@ -464,51 +349,57 @@ class AuthManager {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
-                // IMPORTANTE: No seguir redirecciones automáticamente
-                redirect: 'manual'
+                credentials: 'include' // CRUCIAL: Incluir cookies
             });
             
-            // Si la respuesta es OK o redirección
-            if (response.ok || response.status === 302) {
-                const contentType = response.headers.get('content-type');
+            // Intentar parsear como JSON
+            try {
+                const data = await response.json();
                 
-                // Si es JSON, procesar
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
+                if (data.success) {
+                    console.log('✅ Sesión restaurada exitosamente');
+                    this.retryCount = 0; // Resetear contador
                     
-                    if (data.success || data.reload) {
-                        console.log('✅ Sesión restaurada, recargando página...');
-                        setTimeout(() => window.location.reload(), 500);
-                        return { success: true, reload: true };
-                    } else if (data.needs_token) {
-                        console.log('ℹ️ Servidor pide token nuevamente');
-                        return { success: false, needsToken: true };
-                    }
+                    // Recargar después de un breve delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                    
+                    return { success: true, reloading: true };
+                    
+                } else if (data.needs_token) {
+                    // El servidor quiere que enviemos el token, pero ya lo hicimos
+                    console.log('ℹ️ Servidor solicitó token (ya enviado)');
+                    return { success: false, needsToken: true };
+                    
+                } else if (data.redirect) {
+                    console.log('⚠️ Redirigiendo a:', data.redirect);
+                    window.location.href = data.redirect;
+                    return { success: false };
                 }
                 
-                // Si es HTML normal, la sesión ya está activa
-                console.log('✅ Sesión PHP activa');
-                return { success: true };
+            } catch (jsonError) {
+                // Si no es JSON, verificar si es HTML (sesión ya activa)
+                console.log('Respuesta no es JSON, verificando contenido...');
+                const text = await response.text();
                 
-            } else if (response.status === 0 || response.type === 'opaqueredirect') {
-                // Redirección detectada
-                console.log('⚠️ Redirección detectada, verificando...');
-                return { success: false, redirect: 'login.php' };
+                if (text.includes('Dashboard - Sistema Inventarios') || 
+                    text.includes('ACCESO PERMITIDO')) {
+                    console.log('✅ Sesión ya está activa en esta pestaña');
+                    return { success: true };
+                }
+                
+                // Si es la página de restauración, ya está manejando
+                if (text.includes('Restaurando tu sesión')) {
+                    console.log('ℹ️ Página de restauración detectada');
+                    return { success: false, alreadyRestoring: true };
+                }
             }
             
-            const text = await response.text();
-            console.log('Respuesta del servidor:', text.substring(0, 200));
-            
-            // Verificar si ya tenemos acceso
-            if (!text.includes('Acceso denegado') && !text.includes('login.php')) {
-                console.log('✅ Acceso confirmado en contenido HTML');
-                return { success: true };
-            }
-            
-            return { success: false, needsToken: true };
+            return { success: false };
             
         } catch (error) {
-            console.error('❌ Error restaurando sesión:', error);
+            console.error('❌ Error en restorePHPSession:', error);
             return { success: false, error: error.message };
         }
     }
@@ -516,43 +407,92 @@ class AuthManager {
     logout() {
         localStorage.removeItem(this.tokenKey);
         localStorage.removeItem(this.userKey);
-        // Limpiar cookie de backup
-        document.cookie = 'user_backup=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-        window.location.href = 'cerrar_sesion.php';
+        // Enviar petición para cerrar sesión en el servidor
+        fetch('cerrar_sesion.php', { method: 'POST', credentials: 'include' })
+            .finally(() => {
+                window.location.href = 'login.php';
+            });
     }
     
-    // Verificar autenticación al cargar
+    // Verificar autenticación
     async verifyOnLoad() {
-        const tieneAccesoPHP = <?php echo $tieneAcceso ? 'true' : 'false'; ?>;
-        console.log('🔍 Estado PHP inicial:', tieneAccesoPHP ? '✅ Con acceso' : '❌ Sin acceso');
+        console.log('🔍 Verificando estado de autenticación...');
         
-        // Si PHP ya tiene acceso, todo bien
+        // Verificar primero localStorage
+        const token = localStorage.getItem(this.tokenKey);
+        const user = localStorage.getItem(this.userKey);
+        
+        if (!token || !user) {
+            console.log('❌ No hay credenciales en localStorage');
+            window.location.href = 'login.php';
+            return false;
+        }
+        
+        // Si PHP dice que tenemos acceso, todo bien
+        const tieneAccesoPHP = <?php echo $tieneAcceso ? 'true' : 'false'; ?>;
         if (tieneAccesoPHP) {
-            console.log('✅ Sesión PHP activa, continuando...');
+            console.log('✅ Sesión PHP activa');
             return true;
         }
         
-        // Si no tiene acceso, intentar restaurar
-        console.log('🔄 PHP sin sesión, intentando restaurar...');
+        console.log('🔄 Sesión PHP no activa, intentando restaurar...');
         const result = await this.restorePHPSession();
         
-        if (result.success) {
-            if (result.reload) {
-                // Ya se está recargando, no hacer nada más
-                return false;
-            }
-            return true;
-        } else if (result.needsToken) {
-            // El servidor quiere el token, ya se envió en restorePHPSession
-            return false;
-        } else if (result.redirect) {
-            window.location.href = result.redirect;
-            return false;
-        }
-        
-        return false;
+        return result.success;
     }
 }
+
+// =============================================
+// INICIALIZACIÓN PRINCIPAL - SIMPLIFICADA
+// =============================================
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🚀 Iniciando dashboard...');
+    authToken = localStorage.getItem('auth_token');
+    
+    
+    if (!authToken || !storedUser) {
+                window.location.href = 'login.php';
+                return;
+            }
+
+        // Caso 2: Hay token pero PHP no tiene acceso
+        if (!tieneAcceso) {
+            const formData = new FormData();
+            formData.append('token', authToken);
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Después de enviar el token, recargar la página
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.href = 'login.php';
+            });
+        }
+    
+    // Inicializar manager
+    const authManager = new AuthManager();
+    
+    // Verificar autenticación
+    const isAuthenticated = await authManager.verifyOnLoad();
+    
+    if (!isAuthenticated) {
+        // Si no está autenticado, verifyOnLoad ya maneja la redirección
+        return;
+    }
+    
+    // Si llegamos aquí, cargar dashboard normal
+    console.log('✅ Dashboard cargado exitosamente');
+    await loadDashboardData();
+    updateUserInfo();
+    setupEventListeners();
+});
+
+// ... resto de tus funciones JavaScript ...
 
 // =============================================
 // INICIALIZACIÓN PRINCIPAL
