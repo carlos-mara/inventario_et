@@ -10,7 +10,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     if ($usuario) {
         $_SESSION['usuario'] = $usuario;
     }
-}elseif($_SESSION['usuario']['rol'] == "admin"){
+}elseif($_SESSION['usuario']['rol'] == "admin" || $_SESSION['usuario']['rol'] == "proyectos") {
     $tieneAcceso = true;
 }else {
     echo "<h1>Usuario: ".$_SESSION['usuario']."</h1>";

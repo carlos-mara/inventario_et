@@ -1661,9 +1661,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${proyecto.estado == 1 ? `
                         <div class="row text-center mt-4">
                             <div class="col-12">
+                            <?php if ($_SESSION['usuario']['rol'] == "admin" ):?>
                                 <button class="btn btn-primary" onclick="abrirModalFirma(${proyecto.id})">
                                     <i class="fas fa-signature me-2"></i>Finalizar proyecto con firma
                                 </button>
+                            <?php endif;?>
                             </div>
                         </div>` : ''}
                     `;
