@@ -273,6 +273,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         option.textContent = categoria.nombre;
                         categoriaSelect.appendChild(option);
                     });
+                    cargarDatosEtiqueta();
+                    
                 } else {
                     throw new Error(result.msj);
                 }
@@ -530,7 +532,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             updateUserInfo();
             updateCurrentTime();
             cargarCategorias();
-            cargarDatosEtiqueta();
+            /* cargarDatosEtiqueta(); */
             
             document.getElementById('logoutBtn').addEventListener('click', logout);
             document.getElementById('dropdownLogoutBtn').addEventListener('click', logout);
