@@ -228,7 +228,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                                 <tr>
                                                                     <th width="60px">Imagen</th>
                                                                     <th>Etiqueta</th>
-                                                                    <th width="140px">Tamaño</th>
+                                                                    <th width="140px">Tamaño <p class="form-text m-0">Ancho x Alto</p> </th>
                                                                     <th width="140px">Categoría</th>
                                                                     <th width="90px">Stock Disponible</th>
                                                                     <th width="160px">Cantidad Requerida</th>
@@ -472,11 +472,12 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                         value='${JSON.stringify(tamano)}'
                                         ${index === 0 ? 'checked' : ''}>
                                     <label class="form-check-label" for="${tamanoId}">
-                                        ${tamano.alto} x ${tamano.ancho} cm
+                                        ${tamano.ancho} x ${tamano.alto} cm
                                         <span class="badge ${badgeClass} tamano-badge ms-2">
                                             ${tamano.stock_actual || 0} disponibles
                                         </span>
                                     </label>
+                                    <p class="form-text mt-0">Ancho x Alto</p>
                                 </div>
                             </div>
                         `;

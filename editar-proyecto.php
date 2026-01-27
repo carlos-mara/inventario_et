@@ -245,7 +245,7 @@ if ($proyecto_id <= 0) {
                                                                 <tr>
                                                                     <th width="60px">Imagen</th>
                                                                     <th>Etiqueta</th>
-                                                                    <th width="140px">Tamaño</th>
+                                                                    <th width="140px">Tamaño <p class="form-text m-0">Ancho x Alto</p> </th>
                                                                     <th width="140px">Categoría</th>
                                                                     <th width="90px">Stock Disponible</th>
                                                                     <th width="160px">Cantidad Requerida</th>
@@ -551,11 +551,13 @@ if ($proyecto_id <= 0) {
                                         value='${JSON.stringify(tamano)}'
                                         ${index === 0 ? 'checked' : ''}>
                                     <label class="form-check-label" for="${tamanoId}">
-                                        ${tamano.alto} x ${tamano.ancho} cm
+                                        
+                                        ${tamano.ancho} x ${tamano.alto} cm
                                         <span class="badge ${badgeClass} tamano-badge ms-2">
                                             ${tamano.stock_actual || 0} disponibles
                                         </span>
                                     </label>
+                                    <p class="form-text mt-0">Ancho x Alto</p>
                                 </div>
                             </div>
                         `;
@@ -676,7 +678,7 @@ if ($proyecto_id <= 0) {
                             ${etiqueta.descripcion ? `<br><small class="text-muted">${etiqueta.descripcion.substring(0, 50)}${etiqueta.descripcion.length > 50 ? '...' : ''}</small>` : ''}
                         </td>
                         <td>
-                            <strong>${etiqueta.alto} x ${etiqueta.ancho} cm</strong>
+                            <strong>${etiqueta.ancho} x ${etiqueta.alto} cm</strong>
                         </td>
                         <td>${etiqueta.categoria_nombre || 'Sin categoría'}</td>
                         <td>

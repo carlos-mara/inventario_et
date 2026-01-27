@@ -1202,7 +1202,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 <label class="form-check-label w-100" for="${radioId}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span>
-                                            <strong>${tamano.alto} x ${tamano.ancho} cm</strong>
+                                            <strong>${tamano.ancho} x ${tamano.alto} cm</strong>
+                                            <p class="form-text">Ancho x Alto cm</p>
                                         </span>
                                         <span class="badge ${badgeClass} tamano-badge">
                                             ${tamano.stock_actual || 0} disponibles
@@ -1295,7 +1296,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     <label class="form-check-label w-100" for="${radioId}">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span>
-                                                <strong>${tamano.alto} x ${tamano.ancho} cm</strong>
+                                                <strong>${tamano.ancho} x ${tamano.alto} cm</strong>
+                                                <p class="form-text">Ancho x Alto cm</p>
                                             </span>
                                             <span class="badge ${badgeClass} tamano-badge">
                                                 ${tamano.stock_actual || 0} disponibles

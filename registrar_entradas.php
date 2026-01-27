@@ -196,6 +196,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                 <div class="row">
                                                     <div class="col-6">
                                                         <strong>Tamaño:</strong>
+                                                        <p class="form-text mb-0">Ancho x Alto</p>
                                                         <div id="tamanoSeleccionadoTexto"></div>
                                                     </div>
                                                     <div class="col-6 text-end">
@@ -433,7 +434,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 <label class="form-check-label w-100" for="${radioId}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span>
-                                            <strong>${tamano.alto} x ${tamano.ancho} cm</strong>
+                                            <strong>${tamano.ancho} x ${tamano.alto} cm</strong>
+                                            <p class="form-text">Ancho x Alto cm</p>
                                         </span>
                                         <span class="badge ${badgeClass} tamano-badge">
                                             ${tamano.stock_actual || 0} disponibles
@@ -473,7 +475,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 const badgeClass = obtenerClaseBadgeStock(tamanoSeleccionado.stock_actual);
                 
                 document.getElementById('tamanoSeleccionadoTexto').textContent = 
-                    `${tamanoSeleccionado.alto} x ${tamanoSeleccionado.ancho} cm`;
+                    `${tamanoSeleccionado.ancho} x ${tamanoSeleccionado.alto} cm`;
                 
                 const stockBadge = document.getElementById('stockTamanoSeleccionado');
                 stockBadge.textContent = `${tamanoSeleccionado.stock_actual || 0} unidades`;
