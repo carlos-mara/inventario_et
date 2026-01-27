@@ -47,7 +47,7 @@ class Etiqueta {
             $sql = "SELECT etiquetas.*, categorias.nombre AS categoria_nombre
                     FROM etiquetas
                     JOIN categorias ON categorias.id = etiquetas.categoria_id
-                    WHERE etiquetas.activa = 1 ORDER BY id DESC";
+                    WHERE etiquetas.activa = 1 ORDER BY etiquetas.nombre ASC";
             
             $parametros = [];
             
@@ -69,7 +69,7 @@ class Etiqueta {
                     FROM proyecto_etiquetas AS ep
                     JOIN etiquetas AS e ON e.id = ep.id_etiqueta
                     JOIN categorias ON categorias.id = e.categoria_id
-                    WHERE id_proyecto = $id ORDER BY e.id DESC;";
+                    WHERE id_proyecto = $id ORDER BY e.nombre ASC;";
             
             $parametros = [];
             

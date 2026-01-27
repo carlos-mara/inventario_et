@@ -317,7 +317,7 @@ class ProyectosControllers extends Proyecto
         }
     }
 
-    public function editarProyect($id, $codigo, $nombre, $descripcion, $fecha_inicio, $fecha_update, $token, $etiquetas)
+    public function editarProyect($id, $estado, $codigo, $nombre, $descripcion, $fecha_inicio, $fecha_update, $token, $etiquetas)
     {
         try {
             $validacion = $this->verificarAcceso($token);
@@ -338,6 +338,7 @@ class ProyectosControllers extends Proyecto
                 ':id' => $id,
                 ':codigo' => $codigo,
                 ':nombre' => $nombre,
+                ':estado' => $estado,
                 ':descripcion' => $descripcion,
                 ':fecha_inicio' => $fecha_inicio,
                 ':fecha_update' => $fecha_update
@@ -1396,9 +1397,10 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 $id = $_POST['id'];
                 $etiquetas = $_POST['etiquetas'] ?? '[]';
+                $estado = $_POST['estado'] ?? '';
                 
 
-                $respuesta = $controller->editarProyect($id, $codigo, $nombre, $descripcion, $fecha_inicio, $fecha_update, $token, $etiquetas);
+                $respuesta = $controller->editarProyect($id, $estado, $codigo, $nombre, $descripcion, $fecha_inicio, $fecha_update, $token, $etiquetas);
 
             break;
 

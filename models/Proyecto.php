@@ -233,6 +233,7 @@ class Proyecto {
             $sql = "UPDATE proyectos
                     SET codigo = :codigo,
                         nombre = :nombre,
+                        estado = :estado,
                         descripcion = :descripcion,
                         fecha_inicio = :fecha_inicio,
                         fecha_update = :fecha_update

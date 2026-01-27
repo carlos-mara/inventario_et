@@ -493,9 +493,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     <div class="multiple-items-container mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <label class="form-label fw-bold mb-0">Items a Despachar *</label>
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="agregarItemMultiple()">
-                                                <i class="fas fa-plus me-1"></i>Agregar Item
-                                            </button>
+                                            
                                         </div>
                                         
                                         <!-- Items Agregados -->
@@ -527,7 +525,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                         <label class="form-label fw-bold mb-2">Tamaño *</label>
                                                         <div class="tamanos-radio-group" id="tamanosRadioGroupItem1"></div>
                                                     </div>
-
+                                                    
                                                     <!-- Cantidad -->
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Cantidad *</label>
@@ -559,7 +557,11 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                             </div>
                                         </div>
                                     </div>
-
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-lg btn-outline-primary" onclick="agregarItemMultiple()">
+                                            <i class="fas fa-plus me-1"></i>Agregar Item
+                                        </button>
+                                    </div>
                                     <!-- Motivo (común para todas las salidas) -->
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Motivo de Salidas *</label>
@@ -2228,7 +2230,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
 
             const alto = tamano.alto;
             const ancho = tamano.ancho;
-            const tamano_id = tamano.id;
+            const tamano_id = tamano.id_tamano;
 
             if (!etiquetaId || !cantidad || !motivo) {
                 mostrarMensaje('error', 'Por favor complete todos los campos requeridos');
@@ -2363,7 +2365,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         cantidad: cantidad,
                         alto: tamano.alto,
                         ancho: tamano.ancho,
-                        tamano_id: tamano.id
+                        tamano_id: tamano.id_tamano
                     });
                     
                 } catch (error) {

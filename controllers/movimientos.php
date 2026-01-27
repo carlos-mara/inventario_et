@@ -687,8 +687,8 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 
                 // Guardar foto si existe
                 $foto_url = null;
-                if (!empty($salida['foto_base64'])) {
-                    $foto_url = guardarFotoBase64($foto_base64, $fecha, 'salida');
+                if (!empty($foto_base64)) {
+                    $foto_url = guardarFotoBase64($foto_base64, 00, 'salida');
                 }
                 foreach ($salidas as $salida) {
                     
