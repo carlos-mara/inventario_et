@@ -8,14 +8,14 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     $usuario = $auth->crearSesionDesdeToken($_POST['token']);
     
     if ($usuario) {
+        $tieneAcceso = true;
         $_SESSION['usuario'] = $usuario;
     }
 }elseif($_SESSION['usuario']['rol'] == "admin" || $_SESSION['usuario']['rol'] == "proyectos") {
     $tieneAcceso = true;
 }else {
-    echo "<h1>Usuario: ".$_SESSION['usuario']."</h1>";
-    echo "<h1>Acceso denegado</h1>";
-    echo '<a href="login.php">Volver a iniciar sesión</a>';
+    $tieneAcceso = false;
+    require_once 'cerrar_sesion.php';
     exit;
 }
 ?>
