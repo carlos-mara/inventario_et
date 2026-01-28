@@ -1540,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <thead>
                                         <tr>
                                             <th>Etiqueta</th>
-                                            <th>Tamaño</th>
+                                            <th>Tamaño <p class="form-text m-0">Ancho x Alto</p></th>
                                             <th>Cantidad</th>
                                             <th>Cantidad Entregada</th>
                                             <th>Stock Disponible</th>
@@ -1572,7 +1572,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <strong>${etiqueta.alto} x ${etiqueta.ancho} cm</strong>
+                                                        <strong>${etiqueta.ancho} x ${etiqueta.alto} cm</strong>
                                                     </td>
                                                     <td>
                                                         <span class="badge bg-primary">${cantidad} unid.</span>

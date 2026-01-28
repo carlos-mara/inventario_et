@@ -99,7 +99,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 <!-- Contenido -->
                 <div class="container-fluid mt-4">
                     <!-- Barra de Búsqueda y Filtros -->
-                    <div class="row mb-4">
+                    <!-- <div class="row mb-4">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-body">
@@ -140,7 +140,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <!-- Estadísticas Rápidas -->
                     <div class="row mb-4">

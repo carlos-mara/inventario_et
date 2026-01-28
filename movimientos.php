@@ -505,7 +505,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         columns: [
                             
                             {
-                                name: 'Fecha', 
+                                name: 'Fecha', width: '170px',
                                     formatter: (cell) => {
                                         const fecha = new Date(cell);
                                         return fecha.toLocaleString('es-ES');
@@ -526,7 +526,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                 }
                             },
                             {
-                                name: 'Cantidad',
+                                name: 'Cantidad', width: '130px',
                                 formatter: (cell, row) => {
                                     const tipo = row.cells[2].data;
                                     const cantidad = row.cells[3].data;
@@ -539,19 +539,19 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                     `);
                                 }
                             },
-                            'Cantidad Anterior',
-                            'Cantidad Nueva',
-                            'Usuario',
+                            {name:'Cantidad Anterior', width: '180px'},
+                            {name:'Cantidad Nueva', width: '180px'},
+                            
                             'Motivo',
                             
                             {
-                                name: 'Acciones',
+                                name: 'Acciones', width: '120px',
                                 formatter: (cell, row) => gridjs.html(`
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" onclick="verDetalleMovimiento(${row.cells[8].data})" title="Ver detalles">
+                                        <button class="btn btn-outline-primary" onclick="verDetalleMovimiento(${row.cells[7].data})" title="Ver detalles">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-outline-danger" onclick="revertirMovimiento(${row.cells[8].data})" title="Eliminar">
+                                        <button class="btn btn-outline-danger" onclick="revertirMovimiento(${row.cells[7].data})" title="Eliminar">
                                             <i class="fas fa-undo"></i>
                                         </button>
                                     </div>
@@ -567,7 +567,6 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             item.cantidad,
                             item.cantidad_anterior,
                             item.cantidad_nueva,
-                            item.usuario_nombre,
                             item.motivo,
                             item.id,
                         ]),

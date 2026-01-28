@@ -602,7 +602,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             ${etiqueta.descripcion ? `<br><small class="text-muted">${etiqueta.descripcion.substring(0, 50)}${etiqueta.descripcion.length > 50 ? '...' : ''}</small>` : ''}
                         </td>
                         <td>
-                            <strong>${etiqueta.alto} x ${etiqueta.ancho} cm</strong>
+                            <strong>${etiqueta.ancho} x ${etiqueta.alto} cm</strong>
                         </td>
                         <td>${etiqueta.categoria_nombre || 'Sin categoría'}</td>
                         <td>
