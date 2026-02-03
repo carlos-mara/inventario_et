@@ -58,7 +58,7 @@ class MovimientosControllers extends Movimiento
         }
     }
 
-    public function movimiento($token, $etiqueta_id, $tipo, $cantidad, $alto, $ancho, $id_tamano, $precio, $motivo = null, $referencia = null, $observaciones = null, $cantidad_anterior = 0, $cantidad_nueva = 0, $cod_proyecto = null, $usuario_id, $fecha = null, $foto_url = null) 
+    public function movimiento($token, $etiqueta_id, $tipo, $cantidad, $alto, $ancho, $id_tamano, $precio, $motivo = null, $referencia = null, $observaciones = null, $cantidad_anterior = 0, $cantidad_nueva = 0, $cod_proyecto = "null", $id_etiqueta_proyecto = null, $usuario_id, $fecha = null, $foto_url = null) 
     {
         try {
             $validacion = $this->verificarAcceso($token);
@@ -77,9 +77,8 @@ class MovimientosControllers extends Movimiento
                 }
                 
                 // Si hay proyecto, verificar cantidad restante asignada
-                if ($cod_proyecto) {
-                    
-                    $info_proyecto = $this->pro->obtenerCantidadesProyectoEtiqueta($cod_proyecto, $etiqueta_id);
+                if ($cod_proyecto != null && $cod_proyecto != "null" && $cod_proyecto != "") {
+                    $info_proyecto = $this->pro->obtenerCantidadesProyectoEtiqueta($cod_proyecto, $id_tamano);
                     
                     $cantidad_restante = $info_proyecto['cantidad_asignada'] - $info_proyecto['cantidad_entregada'];
                     
@@ -102,16 +101,36 @@ class MovimientosControllers extends Movimiento
                 $cantidad_nueva_et = $cantidad_anterior_et - $cantidad;
             }
             
-            $result = parent::registrarMovimiento($etiqueta_id, $tipo, $cantidad, $alto, $ancho, $precio, $motivo, $referencia, $observaciones, $cantidad_anterior, $cantidad_nueva, $cod_proyecto, $usuario_id, $fecha, $foto_url);
+            $parametros = [
+                ':etiqueta_id'      => $etiqueta_id,
+                ':tipo'             => $tipo,
+                ':cantidad'         => $cantidad,
+                ':alto'             => $alto,
+                ':ancho'            => $ancho,
+                ':precio'           => $precio,
+                ':motivo'           => $motivo,
+                ':referencia'       => $referencia,
+                ':observaciones'    => $observaciones,
+                ':cantidad_anterior'=> $cantidad_anterior,
+                ':cantidad_nueva'   => $cantidad_nueva,
+                ':id_proyecto'     => $cod_proyecto,
+                ':id_etiqueta_proyecto' => $id_etiqueta_proyecto,
+                ':usuario_id'       => $usuario_id,
+                ':fecha'            => $fecha,
+                ':foto'             => $foto_url
+            ];
+            
+            $result = parent::registrarMovimiento($parametros);
             
             if ($result) {
+                
                 parent::actualizarCantidadEtiquetaTamano($id_tamano, $cantidad_nueva);
                 //se actualiza la cantidad total de la etiqueta (todos sus tamaños)
                 parent::actualizarCantidadEtiqueta($etiqueta_id, $cantidad_nueva_et);
                 
                 // Actualizar cantidad entregada en proyecto_etiquetas si hay proyecto
-                if ($cod_proyecto && $tipo === 'salida') {
-                    $this->pro->actualizarCantidadEntregada($cod_proyecto, $etiqueta_id, $cantidad);
+                if ($cod_proyecto && $tipo === 'salida'){ print_r("actualizar cantidad entregada");
+                    $this->pro->actualizarCantidadEntregada($cod_proyecto, $id_etiqueta_proyecto, $cantidad);
                 }
                 
                 return [
@@ -644,7 +663,12 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $ancho           = $_POST['ancho'] ?? null;
                 $id_tamano       = $_POST['tamano_id'] ?? null;
                 $foto_base64     = $_POST['foto_base64'] ?? null;
+                $id_etiqueta_proyecto = $_POST['id_etiqueta_proyecto'] ?? null;
 
+                if($id_etiqueta_proyecto == "null"){
+                    $id_etiqueta_proyecto = null;
+                }
+                
                 // Guardar foto si existe
                 $foto_url = null;
                 if (!empty($foto_base64)) {
@@ -666,6 +690,7 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                     0,
                     0,
                     $cod_proyecto,
+                    $id_etiqueta_proyecto ?? NULL,
                     $usuario_id,
                     $fecha,
                     $foto_url
@@ -707,7 +732,8 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                         $observaciones ?? null,
                         0,
                         0,
-                        $cod_proyecto ?? null,
+                        $cod_proyecto ?? NULL,
+                        $salida['id_etiqueta_proyecto'] ?? NULL,
                         $usuario_id,
                         $fecha,
                         $foto_url

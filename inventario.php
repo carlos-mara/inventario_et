@@ -236,6 +236,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/gridjs/dist/gridjs.umd.js"></script>
+    <script src="js/controlmenu.js"></script>
     <script>
         let userData = null;
         let authToken = null;

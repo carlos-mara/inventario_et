@@ -348,6 +348,7 @@ if ($proyecto_id <= 0) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/controlmenu.js"></script>
     <script>
         let userData = null;
         let authToken = null;
@@ -380,7 +381,11 @@ if ($proyecto_id <= 0) {
                     document.getElementById('nombreProyecto').value = proyectoOriginal.nombre || '';
                     document.getElementById('descripcionProyecto').value = proyectoOriginal.descripcion || '';
                     document.getElementById('fechaInicioProyecto').value = proyectoOriginal.fecha_inicio || '';
-                    document.getElementById('estadoProyecto').value = proyectoOriginal.estado || '1';
+                    let estado = document.getElementById('estadoProyecto').value = proyectoOriginal.estado || '1';
+                    
+                    if(estado == 3){
+                        document.getElementById('buscarEtiqueta').disabled = true;
+                    }
                     
                     // Cargar etiquetas del proyecto
                     if (result.etiquetas && result.etiquetas.length > 0) {
@@ -394,7 +399,9 @@ if ($proyecto_id <= 0) {
                                     alto: etiquetaProyecto.alto,
                                     ancho: etiquetaProyecto.ancho,
                                     cantidad_requerida: etiquetaProyecto.cantidad,
-                                    stock_por_tamano: etiquetaProyecto.stock_actual
+                                    stock_por_tamano: etiquetaProyecto.stock_actual,
+                                    entregado: etiquetaProyecto.cantidad_entregada || 0,
+                                    idEP: etiquetaProyecto.id
                                 };
                                 etiquetasSeleccionadas.push(etiquetaConTamano);
                             }
@@ -618,15 +625,60 @@ if ($proyecto_id <= 0) {
         }
 
         // Remover etiqueta de la tabla
-        function removerEtiqueta(etiquetaId, tamanoId, alto, ancho) {
-            etiquetasSeleccionadas = etiquetasSeleccionadas.filter(e => {
-                if (tamanoId) {
-                    return !(e.id === etiquetaId && e.tamano_id === tamanoId);
+        function removerEtiqueta(etiquetaId, tamanoId, alto, ancho, idEP) {
+            if (!idEP) {
+                 etiquetasSeleccionadas = etiquetasSeleccionadas.filter(e => {
+                    if (tamanoId) {
+                        return !(e.id === etiquetaId && e.tamano_id === tamanoId);
+                    }
+                    return !(e.id === etiquetaId && e.alto === alto && e.ancho === ancho);
+                });
+                actualizarTablaEtiquetas();
+                actualizarResumen();
+                return;
+            }
+            /* mostrar alerta antes de eliminar permanentemente */
+            Swal.fire({
+                title: '¿Está seguro?',
+                text: "Esta acción quitará la etiqueta de este proyecto y eliminará los movimientos relacionados de forma permanente",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    /* hacer peticion eliminar etiqueta de proyecto */
+                    const formData = new FormData();
+                    formData.append('peticion', 'eliminar_etiqueta_proyecto');
+                    formData.append('token', authToken);
+                    formData.append('idEP', idEP);
+                    fetch('controllers/proyectos.php', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => response.json())
+                    .then(data => {
+                        if (data.exito) {
+                            /* eliminar de la lista localmente */
+                            etiquetasSeleccionadas = etiquetasSeleccionadas.filter(e => {
+                                if (tamanoId) {
+                                    return !(e.id === etiquetaId && e.tamano_id === tamanoId);
+                                }
+                                return !(e.id === etiquetaId && e.alto === alto && e.ancho === ancho);
+                            });
+                            actualizarTablaEtiquetas();
+                            actualizarResumen();
+                            mostrarMensaje('success', 'Etiqueta eliminada del proyecto');
+                        } else {
+                            mostrarMensaje('error', 'Error al eliminar la etiqueta del proyecto');
+                        }
+                    }).catch(error => {
+                        console.error('Error eliminando etiqueta del proyecto:', error);
+                        mostrarMensaje('error', 'Error al eliminar la etiqueta del proyecto');
+                    });
                 }
-                return !(e.id === etiquetaId && e.alto === alto && e.ancho === ancho);
             });
-            actualizarTablaEtiquetas();
-            actualizarResumen();
         }
 
         // Actualizar cantidad de una etiqueta
@@ -655,6 +707,7 @@ if ($proyecto_id <= 0) {
             }
 
             let html = '';
+            let estado = document.getElementById('estadoProyecto').value;
             etiquetasSeleccionadas.forEach(etiqueta => {
                 let badgeClass = 'bg-success';
                 if (etiqueta.stock_por_tamano === 0) {
@@ -698,10 +751,12 @@ if ($proyecto_id <= 0) {
                                 '<small class="text-danger">Stock insuficiente</small>' : ''}
                         </td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                    onclick="removerEtiqueta(${etiqueta.id}, ${etiqueta.tamano_id || 'null'}, ${etiqueta.alto}, ${etiqueta.ancho})" title="Quitar">
-                                <i class="fas fa-trash"></i>
+                            ${estado != 3 ? `
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    onclick="removerEtiqueta(${etiqueta.id}, ${etiqueta.tamano_id || 'null'}, ${etiqueta.alto}, ${etiqueta.ancho}, ${etiqueta.idEP || 'null'})">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
@@ -750,7 +805,9 @@ if ($proyecto_id <= 0) {
                     tamano_id: etiqueta.tamano_id,
                     alto: etiqueta.alto,
                     ancho: etiqueta.ancho,
-                    cantidad_requerida: etiqueta.cantidad_requerida || 1
+                    cantidad_requerida: etiqueta.cantidad_requerida || 1,
+                    entregado: etiqueta.entregado || 0,
+                    idEP: etiqueta.idEP || null
                 }));
 
                 const formData = new FormData();

@@ -280,17 +280,60 @@ class Proyecto {
         }
     }
 
+    public function eliminarEtiquetaProyectoPorId($id) {
+        try {
+            // Aquí podrías agregar lógica para validar el token si es necesario
+            
+            $sql = "DELETE FROM proyecto_etiquetas WHERE id = :id";
+            $resultado = $this->conexion->ejecutarConParametros($sql, [':id' => $id]);
+            
+            return $resultado->rowCount() > 0;
+        } catch (Exception $e) {
+            error_log("Error eliminando etiqueta del proyecto: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function actualizarEtiquetaProyecto($parametros) {
+        try {
+            $sql = "UPDATE proyecto_etiquetas
+                    SET cantidad = :cantidad
+                    WHERE id = :id";
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            
+            
+            if ($resultado->rowCount() > 0) {
+                return [
+                    "exito" => true,
+                    "msj" => "Editado exitosamente"
+                ];
+            } else {
+                return [
+                    "exito" => false,
+                    "msj" => "No se realizaron cambios"
+                ];
+            }
+        }catch (Exception $e) {
+            error_log("Error editando proyecto: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
+            ];
+        }
+    }
+
     // En tu modelo Proyecto.php, agrega estos métodos:
 
-    public function obtenerCantidadesProyectoEtiqueta($proyecto_id, $etiqueta_id)
+    public function obtenerCantidadesProyectoEtiqueta($proyecto_id, $id_tamano)
     {
         try {
             $sql = "SELECT cantidad AS cantidad_asignada, cantidad_entregada 
                     FROM proyecto_etiquetas 
-                    WHERE id_proyecto = :proyecto_id AND id_etiqueta = :etiqueta_id";
+                    WHERE id_proyecto = :proyecto_id AND id_tamano = :id_tamano";
             $parametros = [
                 ':proyecto_id' => $proyecto_id,
-                ':etiqueta_id' => $etiqueta_id
+                ':id_tamano' => $id_tamano
             ];
             $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
             $fila = $resultado->fetch(PDO::FETCH_ASSOC);
@@ -317,15 +360,40 @@ class Proyecto {
         }
     }
 
+    public function obtenerDatosEtiquetaProyecto($id){
+        try {
+            $sql = "SELECT 
+                        pe.id AS id_proyecto_etiqueta,
+                        pe.id_proyecto,
+                        pe.id_etiqueta,
+                        pe.id_tamano,
+                        e.nombre as etiqueta_nombre,
+                        pe.cantidad,
+                        pe.cantidad_entregada
+                    FROM proyecto_etiquetas pe
+                    JOIN etiquetas e ON pe.id_etiqueta = e.id
+                    WHERE pe.id = :id";
+            $parametros = [
+                ':id' => $id
+            ];
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->fetch(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            error_log("Error obteniendo datos etiqueta-proyecto: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function actualizarCantidadEntregada($proyecto_id, $etiqueta_id, $cantidad)
     {
         try {
             // Verificar si existe registro
             $sql_check = "SELECT id FROM proyecto_etiquetas 
-                        WHERE id_proyecto = :proyecto_id AND id_etiqueta = :etiqueta_id";
+                        WHERE id_proyecto = :proyecto_id AND id = :id_etiqueta_proyecto";
             $parametros_check = [
                 ':proyecto_id' => $proyecto_id,
-                ':etiqueta_id' => $etiqueta_id
+                ':id_etiqueta_proyecto' => $etiqueta_id
             ];
             $resultado_check = $this->conexion->ejecutarConParametros($sql_check, $parametros_check);
             
@@ -333,11 +401,11 @@ class Proyecto {
                 // Actualizar existente
                 $sql = "UPDATE proyecto_etiquetas 
                     SET cantidad_entregada = cantidad_entregada + :cantidad 
-                    WHERE id_proyecto = :proyecto_id AND id_etiqueta = :etiqueta_id";
+                    WHERE id_proyecto = :proyecto_id AND id = :id_etiqueta_proyecto";
                 $parametros = [
                     ':cantidad' => $cantidad,
                     ':proyecto_id' => $proyecto_id,
-                    ':etiqueta_id' => $etiqueta_id
+                    ':id_etiqueta_proyecto' => $etiqueta_id
                 ];
             } else {
                 // Crear nuevo registro

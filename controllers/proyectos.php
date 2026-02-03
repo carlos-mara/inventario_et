@@ -5,6 +5,8 @@ setLocale(LC_ALL, "es_CO");
 
 // Incluir los archivos necesarios
 require_once "../models/Proyecto.php";
+require_once "../models/Movimiento.php";
+require_once "../models/Etiqueta.php";
 require_once "../middleware/AuthMiddleware.php";
 
 class ProyectosControllers extends Proyecto
@@ -356,14 +358,14 @@ class ProyectosControllers extends Proyecto
             }
 
             // Eliminar tamaños existentes
-            $eliminacion_epro = parent::eliminarEtiquetasPro($id);
+            /* $eliminacion_epro = parent::eliminarEtiquetasPro($id);
             if (!$eliminacion_epro) {
                 $this->conexion->rollBack();
                 return [
                     "exito" => false,
                     "msj" => "Error al eliminar las etiquetas existentes"
                 ];
-            }
+            } */
 
             // Insertar los nuevos tamaños
             $etiquetas = json_decode($etiquetas, true);
@@ -379,18 +381,26 @@ class ProyectosControllers extends Proyecto
                     $tamano_id = $etiqueta['tamano_id'] ?? null;
 
                     // Insertar etiqueta en el proyecto
-                    $parametros_etiqueta = [
-                        ':id_proyecto' => $id,
-                        ':id_etiqueta' => $etiqueta['id'],
-                        ':id_tamano' => $tamano_id,
-                        ':alto' => $etiqueta['alto'],
-                        ':ancho' => $etiqueta['ancho'],
-                        ':cantidad' => $etiqueta['cantidad_requerida']
-                    ];
-
-                    $etiqueta_insertada = parent::agregarEtiquetaProyecto($parametros_etiqueta);
+                    if($etiqueta['idEP'] !== null){
+                        $parametros_etiqueta = [
+                            ':id' => $etiqueta['idEP'],
+                            ':cantidad' => $etiqueta['cantidad_requerida']
+                        ];
+                        $etiqueta_insertada = parent::actualizarEtiquetaProyecto($parametros_etiqueta);
+                        
+                    }else{
+                        $parametros_etiqueta = [
+                            ':id_proyecto' => $id,
+                            ':id_etiqueta' => $etiqueta['id'],
+                            ':id_tamano' => $tamano_id,
+                            ':alto' => $etiqueta['alto'],
+                            ':ancho' => $etiqueta['ancho'],
+                            ':cantidad' => $etiqueta['cantidad_requerida']
+                        ];
+                        $etiqueta_insertada = parent::agregarEtiquetaProyecto($parametros_etiqueta);
+                    }
                     
-                    if (!$etiqueta_insertada) {
+                    if (!$etiqueta_insertada || !$proyecto_actualizado['exito']) {
                         $this->conexion->rollBack();
                         throw new Exception("Error al agregar etiqueta al proyecto");
                     }
@@ -411,6 +421,89 @@ class ProyectosControllers extends Proyecto
             return [
                 "exito" => false,
                 "msj" => "Error interno del servidor: " . $e->getMessage()
+            ];
+        }
+    }
+
+    public function eliminarEtiquetaProyecto($id, $token){
+        try {
+            $validacion = $this->verificarAcceso($token);
+            if (!$validacion['exito']) {
+                return [
+                    'exito' => false,
+                    'msj' => $validacion['msj'],
+                    'codigo' => $validacion['codigo']
+                ];
+            }
+            $this->conexion->beginTransaction();
+            //consultar datos del proyecto y la etiqueta
+            $datos = parent::obtenerDatosEtiquetaProyecto($id);
+            if (!$datos) {
+                $this->conexion->rollBack();
+                return [
+                    "exito" => false,
+                    "msj" => "Error al obtener los datos de la etiqueta del proyecto"
+                ];
+            }
+            if($datos['cantidad_entregada'] > 0){
+                $id_proyecto_etiqueta = $datos['id_proyecto_etiqueta'];
+                /* aqui eliminar movimiento con el id_proyecto_etiqueta */
+                $mov = new Movimiento();
+                $eliminar_mov = $mov->eliminarMovimientoPorProyectoEtiqueta($id_proyecto_etiqueta);
+
+                if (!$eliminar_mov) {
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "No se puede eliminar la etiqueta del proyecto porque no se pudo eliminar el movimiento asociado"
+                    ];
+                }
+                
+                $id_tamano = $datos['id_tamano'];
+                $cantidad_entregada = $datos['cantidad_entregada'];
+                /* aqui volver al estock al tamaño etiequeta con id_tamano */
+                $etiquetaModel = new Etiqueta();
+                $ajustar_stock_tamano = $etiquetaModel->ajustarStockTamanoEtiqueta($id_tamano, $cantidad_entregada);
+                if (!$ajustar_stock_tamano) {
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "No se puede eliminar la etiqueta del proyecto porque no se pudo ajustar el stock del tamaño"
+                    ];
+                }
+                
+                $id_etiqueta = $datos['id_etiqueta'];
+                /* aqui volver al stock total de la etiqueta con el id de la etiqueta */
+                $ajustar_stock_etiqueta = $etiquetaModel->ajustarStockTotalEtiqueta($id_etiqueta, $cantidad_entregada);
+                if (!$ajustar_stock_etiqueta) {
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "No se puede eliminar la etiqueta del proyecto porque no se pudo ajustar el stock total de la etiqueta"
+                    ];
+                }
+            }
+            
+            $eliminacion = parent::eliminarEtiquetaProyectoPorId($id);
+            if (!$eliminacion) {
+                $this->conexion->rollBack();
+                return [
+                    "exito" => false,
+                    "msj" => "Error al eliminar la etiqueta del proyecto"
+                ];
+            }
+
+            $this->conexion->commit();
+            return [
+                "exito" => true,
+                "msj" => "Etiqueta del proyecto eliminada exitosamente"
+            ];
+
+        } catch (Exception $e) {
+            error_log("Error en eliminarEtiquetaProyecto: " . $e->getMessage());
+            return [
+                "exito" => false,
+                "msj" => "Error interno del servidor"
             ];
         }
     }
@@ -1386,6 +1479,12 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $id = $_POST['id'] ?? $_GET['id'] ?? '';
                 $token = $_POST['token'] ?? $_GET['token'] ?? '';
                 $respuesta = $controller->eliminarProyecto($id, $token);
+            break;
+
+            case 'eliminar_etiqueta_proyecto':
+                $id = $_POST['idEP'] ?? $_GET['idEP'] ?? '';
+                $token = $_POST['token'] ?? $_GET['token'] ?? '';
+                $respuesta = $controller->eliminarEtiquetaProyecto($id, $token);
             break;
 
             case 'editar':

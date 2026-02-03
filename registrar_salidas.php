@@ -243,8 +243,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                         <label for="proyectoIdIndividual" class="form-label fw-bold">Proyecto <span class="text-muted">(opcional)</span></label>
                                         <div class="input-group">
                                             <select class="form-select proyecto-select" id="proyectoIdIndividual">
-                                                <option value="">Seleccionar proyecto...</option>
-                                                <option value="">Ninguno (salida general)</option>
+                                                <option value="0">Seleccionar proyecto...</option>
+                                                <option value="0">Ninguno (salida general)</option>
                                             </select>
                                             <button class="btn btn-outline-secondary" type="button" onclick="limpiarProyectoIndividual()" title="Limpiar selección">
                                                 <i class="fas fa-times"></i>
@@ -584,7 +584,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                                 <i class="fas fa-camera fa-3x text-muted mb-2"></i>
                                                 <p class="text-muted text-center small">Tome una foto del lote completo o suba una imagen</p>
                                             </div>
-                                            <img id="photoPreviewMultiple" class="photo-preview-multiple d-none rounded border">
+                                            <img id="photoPreviewMultiple" class="photo-preview-multiple d-none rounded border w-100">
                                         </div>
                                         <div class="d-flex justify-content-between">
                                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="startCameraMultiple()" id="startCameraBtnMultiple">
@@ -728,6 +728,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/controlmenu.js"></script>
     <script>
     let userData = null;
     let authToken = null;
@@ -1845,6 +1846,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             video.id = 'videoPreviewMultiple';
             video.className = 'video-preview-multiple';
             video.autoplay = true;
+            video.style.width = '100%';
+            video.style.height = 'auto';
             
             const photoContainer = document.getElementById('photoContainerMultiple');
             const placeholder = document.getElementById('photoPlaceholderMultiple');
@@ -2233,6 +2236,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             const alto = tamano.alto;
             const ancho = tamano.ancho;
             const tamano_id = tamano.id_tamano;
+            const id_etiqueta_proyecto = tamano.id_etiqueta_proyecto || null;
 
             if (!etiquetaId || !cantidad || !motivo) {
                 mostrarMensaje('error', 'Por favor complete todos los campos requeridos');
@@ -2255,7 +2259,12 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             const formData = new FormData();
             formData.append('peticion', 'registrar_salida');
             formData.append('token', authToken);
-            formData.append('proyecto_id', proyectoId || '');
+            console.log(proyectoId);
+            
+            if (proyectoId != "" || proyectoId != null) {
+                formData.append('proyecto_id', proyectoId);
+            }
+            formData.append('id_etiqueta_proyecto', id_etiqueta_proyecto );
             formData.append('etiqueta_id', etiquetaId);
             formData.append('cantidad', cantidad);
             formData.append('motivo', motivo);
@@ -2344,10 +2353,11 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     const tamano = JSON.parse(radioSeleccionado.value);
                     const cantidad = parseInt(cantidadInput.value);
                     
-                    if (cantidad > tamano.stock_actual) {
+                    
+                    /* if (cantidad > tamano.stock_actual) {
                         errores.push(`Item #${itemIndex}: La cantidad excede el stock disponible (${tamano.stock_actual} unidades)`);
                         return;
-                    }
+                    } */
                     
                     // Validar contra el proyecto si existe
                     if (proyectoId) {
@@ -2356,10 +2366,10 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         const cantidadEntregada = option.dataset.cantidad_entregada || 0;
                         const cantidadRestanteProyecto = cantidadAsignada - cantidadEntregada;
                         
-                        if (cantidad > cantidadRestanteProyecto) {
+                        /* if (cantidad > cantidadRestanteProyecto) {
                             errores.push(`Item #${itemIndex}: La cantidad excede lo asignado al proyecto (${cantidadRestanteProyecto} unidades restantes)`);
                             return;
-                        }
+                        } */
                     }
                     
                     itemsData.push({
@@ -2367,7 +2377,8 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                         cantidad: cantidad,
                         alto: tamano.alto,
                         ancho: tamano.ancho,
-                        tamano_id: tamano.id_tamano
+                        tamano_id: tamano.id_tamano,
+                        id_etiqueta_proyecto: tamano.id_etiqueta_proyecto || null
                     });
                     
                 } catch (error) {

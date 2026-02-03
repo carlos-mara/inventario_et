@@ -7,12 +7,12 @@ class Movimiento {
         $this->conexion = new Conexion();
     }
     
-    public function registrarMovimiento($etiqueta_id, $tipo, $cantidad, $alto, $ancho, $precio, $motivo = null, $referencia = null, $observaciones = null, $cantidad_anterior = 0, $cantidad_nueva = 0, $cod_proyecto = null, $usuario_id, $fecha = null, $foto_url = null) {
-        if ($fecha === null) {
+    public function registrarMovimiento($parametros) {
+        /* if ($fecha === NULL) {
             $fecha = date('Y-m-d H:i:s');
-        }
+        } */
 
-        $parametros = [
+        /* $parametros = [
             ':etiqueta_id'      => $etiqueta_id,
             ':tipo'             => $tipo,
             ':cantidad'         => $cantidad,
@@ -24,20 +24,28 @@ class Movimiento {
             ':observaciones'    => $observaciones,
             ':cantidad_anterior'=> $cantidad_anterior,
             ':cantidad_nueva'   => $cantidad_nueva,
-            ':cod_proyecto'     => $cod_proyecto,
+            ':id_proyecto'     => $cod_proyecto == "" ? null : $cod_proyecto,
+            ':id_etiqueta_proyecto' => $id_etiqueta_proyecto,
             ':usuario_id'       => $usuario_id,
             ':fecha'            => $fecha,
             ':foto'             => $foto_url
-        ];
+        ]; */
         
+/* print_r($parametros); */
         try {
-            $sql = "INSERT INTO movimientos_inventario (etiqueta_id, tipo, cantidad, alto, ancho, precio, motivo, referencia, observaciones, cantidad_anterior, cantidad_nueva, cod_proyecto, usuario_id, fecha_movimiento, foto_evidencia)
-                    VALUES (:etiqueta_id, :tipo, :cantidad, :alto, :ancho, :precio, :motivo, :referencia, :observaciones, :cantidad_anterior, :cantidad_nueva, :cod_proyecto, :usuario_id, :fecha, :foto)";
+            $sql = "INSERT INTO movimientos_inventario (etiqueta_id, tipo, cantidad, alto, ancho, precio, motivo, referencia, observaciones, cantidad_anterior, cantidad_nueva, id_proyecto, id_etiqueta_proyecto, usuario_id, fecha_movimiento, foto_evidencia)
+                    VALUES (:etiqueta_id, :tipo, :cantidad, :alto, :ancho, :precio, :motivo, :referencia, :observaciones, :cantidad_anterior, :cantidad_nueva, :id_proyecto, :id_etiqueta_proyecto, :usuario_id, :fecha, :foto)";
             
             
             
             $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
-            return $resultado->rowCount() > 0;
+            if ($resultado->rowCount() > 0) {
+                return [
+                    "id" => $this->conexion->ultimoRegistro()
+                ];
+            } else {
+                return false;
+            }
             
         } catch (Exception $e) {
             error_log("Error registrando movimiento: " . $e->getMessage());
@@ -304,6 +312,18 @@ class Movimiento {
         $resultado = $this->conexion->ejecutarConParametros($query, $params);
         
         return $resultado->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function eliminarMovimientoPorProyectoEtiqueta($id_proyecto_etiqueta) {
+        try {
+            $sql = "DELETE FROM movimientos_inventario WHERE id_etiqueta_proyecto = :id_proyecto_etiqueta";
+            $parametros = [':id_proyecto_etiqueta' => $id_proyecto_etiqueta];
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->rowCount() > 0;
+        } catch (Exception $e) {
+            error_log("Error eliminando movimiento por proyecto-etiqueta: " . $e->getMessage());
+            return false;
+        }
     }
     
 }

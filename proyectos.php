@@ -703,6 +703,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/controlmenu.js"></script>
     <script>
         let userData = null;
         let authToken = null;
@@ -1481,10 +1482,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 return;
             }
-
+            
+            
             proyectos.forEach(proyecto => {
                 const totalUnidades = proyecto.etiquetas?.reduce((sum, e) => sum + (e.cantidad || 1), 0) || 0;
-                const totalUnidadesEntregadas = proyecto.etiquetas?.reduce((sum, e) => sum + (e.cantidad_entregada || 1), 0) || 0;
+                //const totalUnidadesEntregadas = proyecto.etiquetas?.reduce((sum, e) => sum + (e.cantidad_entregada || 1), 0) || 0;
+                let totalUnidadesEntregadas = 0;
+                if (proyecto.etiquetas && proyecto.etiquetas.length > 0){
+                    for (let i = 0; i < proyecto.etiquetas.length; i++) {
+                        totalUnidadesEntregadas += proyecto.etiquetas[i].cantidad_entregada;
+                        
+                    }
+                }
                 
                 const tr = document.createElement('tr');
                 tr.className = proyecto.estado == 1 ? 'proyecto-activo' : proyecto.estado == 3 ? 'proyecto-finalizado' : 'proyecto-inactivo';

@@ -213,7 +213,7 @@ class Etiqueta {
         try {
             // Aquí podrías agregar la lógica para verificar el token si es necesario
             
-            $sql = "SELECT id, alto, ancho, stock_actual
+            $sql = "SELECT id id_tamano, alto, ancho, stock_actual
                     FROM etiqueta_tamanos
                     WHERE etiqueta_id = :etiqueta_id";
             
@@ -306,7 +306,7 @@ class Etiqueta {
         ];
         
         try {
-            $sql = "SELECT pe.*, et.stock_actual
+            $sql = "SELECT pe.*, pe.id id_etiqueta_proyecto, et.stock_actual
                     FROM proyecto_etiquetas pe
                     INNER JOIN etiqueta_tamanos et ON pe.id_tamano = et.id
                     WHERE pe.id_proyecto = :proyecto_id AND pe.id_etiqueta = :etiqueta_id";
@@ -317,6 +317,44 @@ class Etiqueta {
         } catch (Exception $e) {
             error_log("Error en consultaTamanosPorProyectoEtiqueta: " . $e->getMessage());
             return [];
+        }
+    }
+
+    public function ajustarStockTamanoEtiqueta($id_tamano, $cantidad){
+        try {
+            $sql = "UPDATE etiqueta_tamanos
+                    SET stock_actual = stock_actual + :cantidad
+                    WHERE id = :id_tamano";
+            
+            $parametros = [
+                ':cantidad' => $cantidad,
+                ':id_tamano' => $id_tamano
+            ];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->rowCount() > 0;
+        } catch (Exception $e) {
+            error_log("Error ajustando stock del tamaño de etiqueta: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function ajustarStockTotalEtiqueta($id_etiqueta, $cantidad){
+        try {
+            $sql = "UPDATE etiquetas
+                    SET stock_total = stock_total + :cantidad
+                    WHERE id = :id_etiqueta";
+            
+            $parametros = [
+                ':cantidad' => $cantidad,
+                ':id_etiqueta' => $id_etiqueta
+            ];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->rowCount() > 0;
+        } catch (Exception $e) {
+            error_log("Error ajustando stock total de etiqueta: " . $e->getMessage());
+            return false;
         }
     }
 
