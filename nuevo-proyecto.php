@@ -460,7 +460,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     let html = '<label class="form-label fw-bold">Seleccione un tamaño:</label>';
                     
                     data.tamanos.forEach((tamano, index) => {
-                        const tamanoId = `tamano-${tamano.id || tamano.alto + '-' + tamano.ancho}`;
+                        const tamanoId = `tamano-${tamano.id_tamano || tamano.alto + '-' + tamano.ancho}`;
                         const badgeClass = tamano.stock_actual === 0 ? 'bg-danger' : 
                                         tamano.stock_actual <= 10 ? 'bg-warning' : 'bg-success';
                         
@@ -527,7 +527,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             // Agregar a la lista con el tamaño seleccionado
             etiquetasSeleccionadas.push({
                 ...etiqueta,
-                tamano_id: tamano.id, // ← NUEVO: Incluir el ID del tamaño
+                tamano_id: tamano.id_tamano, // ← NUEVO: Incluir el ID del tamaño
                 alto: tamano.alto,
                 ancho: tamano.ancho,
                 cantidad_requerida: 1,
@@ -679,6 +679,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     ancho: etiqueta.ancho,
                     cantidad_requerida: etiqueta.cantidad_requerida || 1
                 }));
+console.log(etiquetasSeleccionadas);
 
                 const formData = new FormData();
                 formData.append('peticion', 'crear');

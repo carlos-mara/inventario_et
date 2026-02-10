@@ -845,6 +845,10 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                             <li class="list-group-item ${tieneFoto ? 'text-success' : 'text-muted'}">
                                 <strong>Evidencia:</strong> ${tieneFoto ? 'Disponible' : 'No disponible'}
                             </li>
+                            <li class="list-group-item">
+                                <strong>Proyecto:</strong> ${movimiento.nombre_proyecto ? movimiento.nombre_proyecto : 'No'}
+                            </li>
+
                         </ul>
                     </div>
                     <div class="col-md-6">

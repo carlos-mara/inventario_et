@@ -1510,7 +1510,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <button class="btn btn-sm btn-outline-primary" onclick="verDetalleProyecto(${proyecto.id})"><i class="fas fa-eye"></i></button>
                         <a href="./editar-proyecto.php?id=${proyecto.id}" class="btn btn-sm btn-outline-success"><i class="fas fa-edit"></i></a>
                         <?php if($_SESSION['usuario']['rol']=='admin'): ?>
-                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarProyecto(${proyecto.id})"><i class="fas fa-trash"></i></button>
+                            ${ proyecto.estado != 3 ? `
+                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarProyecto(${proyecto.id})"><i class="fas fa-trash"></i></button>`
+                                : ''
+                            }
                         <?php endif;?>
                     </td>
                 `;

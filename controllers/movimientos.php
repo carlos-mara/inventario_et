@@ -66,10 +66,13 @@ class MovimientosControllers extends Movimiento
                     return $validacion;
             }
 
+            $this->conexion->beginTransaction();
+
             // Verificar que hay suficiente stock para salidas
             if ($tipo === 'salida') {
                 $stock_actual = parent::obtenerCantidadActualTamano($id_tamano);
                 if ($stock_actual < $cantidad) {
+                    $this->conexion->rollBack();
                     return [
                         "exito" => false,
                         "msj" => "Stock insuficiente. Stock actual: " . $stock_actual
@@ -83,6 +86,7 @@ class MovimientosControllers extends Movimiento
                     $cantidad_restante = $info_proyecto['cantidad_asignada'] - $info_proyecto['cantidad_entregada'];
                     
                     if ($cantidad_restante < $cantidad) {
+                        $this->conexion->rollBack();
                         return [
                             "exito" => false,
                             "msj" => "Cantidad excede lo asignado al proyecto. Restante: " . $cantidad_restante
@@ -124,20 +128,35 @@ class MovimientosControllers extends Movimiento
             
             if ($result) {
                 
-                parent::actualizarCantidadEtiquetaTamano($id_tamano, $cantidad_nueva);
+                $act_cant_tamano = parent::actualizarCantidadEtiquetaTamano($id_tamano, $cantidad_nueva);
+                if (!$act_cant_tamano) {
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "Error al actualizar el stock del tamaño"
+                    ];
+                }
                 //se actualiza la cantidad total de la etiqueta (todos sus tamaños)
-                parent::actualizarCantidadEtiqueta($etiqueta_id, $cantidad_nueva_et);
-                
-                // Actualizar cantidad entregada en proyecto_etiquetas si hay proyecto
-                if ($cod_proyecto && $tipo === 'salida'){ print_r("actualizar cantidad entregada");
-                    $this->pro->actualizarCantidadEntregada($cod_proyecto, $id_etiqueta_proyecto, $cantidad);
+                $act_cant_total = parent::actualizarCantidadEtiqueta($etiqueta_id, $cantidad_nueva_et);
+                if (!$act_cant_total) {
+                    $this->conexion->rollBack();
+                    return [
+                        "exito" => false,
+                        "msj" => "Error al actualizar el stock total de la etiqueta"
+                    ];
                 }
                 
+                // Actualizar cantidad entregada en proyecto_etiquetas si hay proyecto
+                if ($cod_proyecto && $tipo === 'salida'){
+                    $this->pro->actualizarCantidadEntregada($cod_proyecto, $id_etiqueta_proyecto, $cantidad);
+                }
+                $this->conexion->commit();
                 return [
                     "exito" => true,
                     "msj" => "Movimiento registrado exitosamente"
                 ];
             } else {
+                $this->conexion->rollBack();
                 return [
                     "exito" => false,
                     "msj" => "Error al registrar el movimiento"
@@ -543,6 +562,23 @@ class MovimientosControllers extends Movimiento
         }
     }
 
+    public function revertirCantidadEntregadaProyectoE($id_etiqueta_proyecto, $cantidad)
+    {
+        try {
+            $this->pro->revertirCantidadEntregada($id_etiqueta_proyecto, $cantidad);
+            return [
+                'exito' => true,
+                'msj' => 'Cantidad entregada revertida en proyecto_etiquetas'
+            ];
+        } catch (Exception $e) {
+            error_log("Error en revertirCantidadEntregada Proyecto: " . $e->getMessage());
+            return [
+                'exito' => false,
+                'msj' => 'Error al revertir cantidad entregada: ' . $e->getMessage()
+            ];
+        }
+    }
+
 }
 
 // =============================================
@@ -612,6 +648,53 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
     try {
         switch ($peticion) {
 
+            case 'devolver_etiquetas_pro':
+                $etiqueta_id     = $_POST['etiqueta_id'] ?? null;
+                $cantidad        = intval($_POST['cantidad']) ?? null;
+                $precio          = $_POST['precio_unitario'] ?? 0;
+                $motivo          = $_POST['motivo'] ?? null;
+                $referencia      = $_POST['referencia'] ?? null;
+                $observaciones   = $_POST['observaciones'] ?? null;
+                $cod_proyecto    = $_POST['cod_proyecto'] ?? null;
+                $usuario_id      = $_POST['usuario_id'] ?? null;
+                $fecha           = date('Y-m-d H:i:s');
+                $token           = $_POST['token'] ?? null;
+                $alto            = $_POST['alto'] ?? null;
+                $ancho           = $_POST['ancho'] ?? null;
+                $id_tamano       = $_POST['tamano_id'] ?? null;
+                $id_etiqueta_proyecto = intval($_POST['idEP']) ?? null;
+
+                /* ajustar cantidad entregada de etiqueta proyecto */
+                $revertir = $mov->revertirCantidadEntregadaProyectoE($id_etiqueta_proyecto, $cantidad);
+
+                if(!$revertir['exito']){
+                    $respuesta = $revertir;
+                    break;
+                }else{
+                    $resultado = $mov->movimiento(
+                        $token,
+                        $etiqueta_id,
+                        'entrada',
+                        $cantidad,
+                        $alto,
+                        $ancho,
+                        $id_tamano,
+                        $precio,
+                        $motivo,
+                        $referencia,
+                        $observaciones,
+                        0,
+                        0,
+                        $cod_proyecto,
+                        $id_etiqueta_proyecto,
+                        $usuario_id,
+                        $fecha
+                    );
+                    $respuesta = $resultado;
+                }
+
+            break;
+
             case 'registrar_entrada':
 
                 $etiqueta_id     = $_POST['etiqueta_id'] ?? null;
@@ -627,6 +710,7 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                 $alto            = $_POST['alto'] ?? null;
                 $ancho           = $_POST['ancho'] ?? null;
                 $id_tamano       = $_POST['tamano_id'] ?? null;
+                $id_etiqueta_proyecto = $_POST['idEP'] ?? null;
 
                 $resultado = $mov->movimiento(
                     $token,
@@ -643,6 +727,7 @@ if (isset($_POST["peticion"]) || isset($_GET["peticion"])) {
                     0,
                     0,
                     $cod_proyecto,
+                    $id_etiqueta_proyecto,
                     $usuario_id,
                     $fecha
                 );

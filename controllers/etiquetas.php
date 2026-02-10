@@ -262,7 +262,7 @@ public function editarEtiqueta($id, $nombre, $descripcion, $foto, $stock_minimo,
             }
             
             // Si tiene ID, es un tamaño existente
-            if (isset($tamano['id']) && $tamano['id'] > 0) {
+            if (isset($tamano['id']) && $tamano['id'] > 0 && $tamano['id'] != 'null') {
                 // Verificar si está protegido
                 if (in_array($tamano['id'], $tamanos_protegidos)) {
                     // Tamaño protegido: NO se puede modificar ni eliminar

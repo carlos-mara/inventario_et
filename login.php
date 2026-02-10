@@ -14,6 +14,12 @@ if (isset($_SESSION['usuario'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema Inventarios</title>
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
     
     <!-- MDBootstrap CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.0/mdb.min.css" rel="stylesheet">
@@ -32,6 +38,28 @@ if (isset($_SESSION['usuario'])) {
     </style>
 </head>
 <body>
+    <!-- Modal de Bootstrap para instalación PWA -->
+    <div class="modal fade" id="pwaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📱 Instalar Aplicación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Deseas instalar nuestra aplicación para una mejor experiencia?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Ahora no
+                    </button>
+                    <button type="button" class="btn btn-primary" id="installPWA">
+                        Instalar aplicación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Contenedor Principal -->
     <section class="gradient-custom">
         <div class="container py-5 h-100">
@@ -125,6 +153,7 @@ if (isset($_SESSION['usuario'])) {
 
     <!-- MDBootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/6.4.0/mdb.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
         // =============================================
@@ -379,6 +408,75 @@ if (isset($_SESSION['usuario'])) {
                 return JSON.parse(localStorage.getItem('user') || 'null');
             }
         };
+    </script>
+
+    <script>
+        // Variable para guardar el evento de instalación
+        let deferredPrompt;
+        
+        // 1. Detectar cuando la PWA se puede instalar
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar el modal automáticamente
+            const pwaModal = new bootstrap.Modal(document.getElementById('pwaModal'));
+            
+            // Esperar un momento para que la página cargue completamente
+            setTimeout(() => {
+                pwaModal.show();
+            }, 1000); // 1 segundo después de cargar
+        });
+        
+        // 2. Botón para instalar en el modal
+        document.getElementById('installPWA').addEventListener('click', () => {
+            if (deferredPrompt) {
+                // Cerrar el modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('pwaModal'));
+                modal.hide();
+                
+                // Mostrar el prompt nativo de instalación
+                deferredPrompt.prompt();
+                
+                // Esperar la respuesta del usuario
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Usuario aceptó instalar la PWA');
+                        // Opcional: mostrar mensaje de éxito
+                        setTimeout(() => {
+                            alert('¡Aplicación instalada con éxito! 🎉');
+                        }, 500);
+                    } else {
+                        console.log('Usuario rechazó la instalación');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+        
+        // 3. También verificar si YA está instalado para no mostrar el modal
+        window.addEventListener('DOMContentLoaded', () => {
+            // Si ya está instalado como PWA, no mostrar modal
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('Ya está instalado como PWA');
+                return;
+            }
+            
+            // Verificar si ya se mostró el modal hoy
+            const lastShown = localStorage.getItem('pwaModalLastShown');
+            if (lastShown) {
+                const today = new Date().toDateString();
+                const lastDate = new Date(parseInt(lastShown)).toDateString();
+                if (today === lastDate) {
+                    return; // Ya se mostró hoy
+                }
+            }
+            
+            // Guardar cuando se muestra el modal
+            document.getElementById('pwaModal').addEventListener('shown.bs.modal', () => {
+                localStorage.setItem('pwaModalLastShown', Date.now());
+            });
+        });
     </script>
 </body>
 </html>

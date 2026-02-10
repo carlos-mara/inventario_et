@@ -746,7 +746,28 @@ class Proyecto {
         error_log("Error en obtenerTotalEstadisticas: " . $e->getMessage());
         throw $e;
     }
+
+    
 }
+    public function revertirCantidadEntregada($etiqueta_id, $cantidad)
+    {
+        try {
+            $sql = "UPDATE proyecto_etiquetas 
+                    SET cantidad_entregada = (cantidad_entregada - :cantidad) 
+                    WHERE id = :id_etiqueta_proyecto";
+            $parametros = [
+                ':cantidad' => $cantidad,
+                ':id_etiqueta_proyecto' => $etiqueta_id
+            ];
+            
+            $resultado = $this->conexion->ejecutarConParametros($sql, $parametros);
+            return $resultado->rowCount() > 0;
+            
+        } catch (Exception $e) {
+            error_log("Error revirtiendo cantidad entregada: " . $e->getMessage());
+            return false;
+        }
+    }
 
 }
 ?>

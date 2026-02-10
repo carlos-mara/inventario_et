@@ -546,7 +546,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 const motivo = document.getElementById('motivo').value;
                 const observaciones = document.getElementById('observaciones').value;
                 const referencia = document.getElementById('referencia').value;
-                const cod_proyecto = null;
+                const cod_proyecto = '';
                 const usuario_id = userData.id;
                 
                 const tamano = obtenerTamanoSeleccionado();
@@ -554,10 +554,10 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                     mostrarMensaje('error', 'Por favor seleccione un tamaño');
                     return;
                 }
-
+                
                 const alto = tamano.alto;
                 const ancho = tamano.ancho;
-                const tamano_id = tamano.id;
+                const tamano_id = tamano.id_tamano;
 
                 if (!etiquetaId || !cantidad || !motivo) {
                     mostrarMensaje('error', 'Por favor complete todos los campos requeridos');

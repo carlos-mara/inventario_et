@@ -239,11 +239,11 @@ class ProyectosControllers extends Proyecto
             if ($proyecto) {
                 $etiquetas = parent::obtenerEtiquetasProyecto($id);
                 
-                if ($proyecto[0]['estado'] == 3) {
+                /* if ($proyecto[0]['estado'] == 3) { */
                     $firmas = parent::obtenerFirmas($id);
-                }else{
+                /* }else{
                     $firmas = [];
-                }
+                } */
 
                 return [
                     "exito" => true,

@@ -249,6 +249,7 @@ if ($proyecto_id <= 0) {
                                                                     <th width="140px">Categoría</th>
                                                                     <th width="90px">Stock Disponible</th>
                                                                     <th width="160px">Cantidad Requerida</th>
+                                                                    <th width="100px">Entregado</th>
                                                                     <th width="80px">Acciones</th>
                                                                 </tr>
                                                             </thead>
@@ -401,7 +402,8 @@ if ($proyecto_id <= 0) {
                                     cantidad_requerida: etiquetaProyecto.cantidad,
                                     stock_por_tamano: etiquetaProyecto.stock_actual,
                                     entregado: etiquetaProyecto.cantidad_entregada || 0,
-                                    idEP: etiquetaProyecto.id
+                                    idEP: etiquetaProyecto.id,
+                                    cant_entregada: etiquetaProyecto.cantidad_entregada || 0
                                 };
                                 etiquetasSeleccionadas.push(etiquetaConTamano);
                             }
@@ -545,7 +547,7 @@ if ($proyecto_id <= 0) {
                     let html = '<label class="form-label fw-bold">Seleccione un tamaño:</label>';
                     
                     data.tamanos.forEach((tamano, index) => {
-                        const tamanoId = `tamano-${tamano.id || tamano.alto + '-' + tamano.ancho}`;
+                        const tamanoId = `tamano-${tamano.id_tamano || tamano.alto + '-' + tamano.ancho}`;
                         const badgeClass = tamano.stock_actual === 0 ? 'bg-danger' : 
                                         tamano.stock_actual <= 10 ? 'bg-warning' : 'bg-success';
                         
@@ -613,7 +615,7 @@ if ($proyecto_id <= 0) {
             // Agregar a la lista con el tamaño seleccionado
             etiquetasSeleccionadas.push({
                 ...etiqueta,
-                tamano_id: tamano.id,
+                tamano_id: tamano.id_tamano,
                 alto: tamano.alto,
                 ancho: tamano.ancho,
                 cantidad_requerida: 1,
@@ -708,6 +710,8 @@ if ($proyecto_id <= 0) {
 
             let html = '';
             let estado = document.getElementById('estadoProyecto').value;
+            console.log(etiquetasSeleccionadas);
+            
             etiquetasSeleccionadas.forEach(etiqueta => {
                 let badgeClass = 'bg-success';
                 if (etiqueta.stock_por_tamano === 0) {
@@ -751,18 +755,105 @@ if ($proyecto_id <= 0) {
                                 '<small class="text-danger">Stock insuficiente</small>' : ''}
                         </td>
                         <td>
-                            ${estado != 3 ? `
-                            <button type="button" class="btn btn-sm btn-danger" 
-                                    onclick="removerEtiqueta(${etiqueta.id}, ${etiqueta.tamano_id || 'null'}, ${etiqueta.alto}, ${etiqueta.ancho}, ${etiqueta.idEP || 'null'})">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                            ` : ''}
+                            ${etiqueta.cant_entregada ? `<small class="text-muted"> ${etiqueta.cant_entregada} unid.</small>` : '0 unid.'}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                ${etiqueta.cant_entregada == 0 || !etiqueta.cant_entregada ?`
+                                    ${estado != 3 ? `
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            onclick="removerEtiqueta(${etiqueta.id}, ${etiqueta.tamano_id || 'null'}, ${etiqueta.alto}, ${etiqueta.ancho}, ${etiqueta.idEP || 'null'})">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    ` : ''}
+                                ` : ''}
+                                ${etiqueta.cant_entregada > 0 ? `
+                                <button type="button" class="btn btn-sm btn-secondary" title="Devolver Etiqueta" 
+                                        onclick="devolucion(${etiqueta.id}, ${etiqueta.tamano_id || 'null'}, ${etiqueta.idEP || 'null'}, ${etiqueta.alto}, ${etiqueta.ancho}, ${etiqueta.cant_entregada || 0})">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                ` : ''}
+                            </div>
                         </td>
                     </tr>
                 `;
             });
 
             tbody.innerHTML = html;
+        }
+
+        function devolucion(etiquetaId, tamanoId, idEP, alto, ancho, cantidadEntregada) {
+            Swal.fire({
+                title: 'Devolver Etiquetas',
+                html: `
+                    <p class="mb-0">Ingrese la cantidad de etiquetas a devolver </p><p> (entregadas: <strong>${cantidadEntregada}</strong>)</p>
+                    <label class="form-text col-12 mt-2" for="cantidadDevolver" >Cantidad a Devolver:</label>
+                    <input type="number" id="cantidadDevolver" class="swal2-input mt-0" min="1" max="${cantidadEntregada}" value="${cantidadEntregada}">
+                    <label class="form-text col-12 mt-2" for="comentarioDevolucion" >Comentario:</label>
+                    <textarea id="comentarioDevolucion" class="swal2-textarea mt-0" placeholder="Opcional"></textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Devolver',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const cantidad = parseInt(document.getElementById('cantidadDevolver').value);
+                    if (isNaN(cantidad) || cantidad < 1 || cantidad > cantidadEntregada) {
+                        Swal.showValidationMessage(`Por favor ingrese una cantidad válida`);
+                    }
+                    return cantidad;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const cantidadADevolver = result.value;
+                    const comentario = document.getElementById('comentarioDevolucion').value;
+                    // Aquí puedes hacer la petición para registrar la devolución
+                    registrarDevolucion(etiquetaId, tamanoId, idEP, alto, ancho, cantidadADevolver, comentario);
+                }
+            });
+        }
+
+        function registrarDevolucion(etiquetaId, tamanoId, idEP, alto, ancho, cantidad, comentario) {
+            const formData = new FormData();
+            formData.append('peticion', 'devolver_etiquetas_pro');
+            formData.append('token', authToken);
+            formData.append('idEP', idEP);
+            formData.append('cantidad', cantidad);
+            formData.append('etiqueta_id', etiquetaId);
+            formData.append('tamano_id', tamanoId || '');
+            formData.append('alto', alto || '');
+            formData.append('ancho', ancho || '');
+            formData.append('motivo', 'devolucion desde editar proyecto');
+            formData.append('usuario_id', userData.id);
+            formData.append('observaciones', comentario || '');
+
+            fetch('controllers/movimientos.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.exito) {
+                    mostrarMensaje('success', 'Devolución registrada exitosamente');
+                    // Actualizar la cantidad entregada en la tabla
+                    const etiqueta = etiquetasSeleccionadas.find(e => {
+                        if (tamanoId) {
+                            return e.id === etiquetaId && e.tamano_id === tamanoId;
+                        }
+                        return e.id === etiquetaId && e.alto === alto && e.ancho === ancho;
+                    });
+                    if (etiqueta) {
+                        etiqueta.cant_entregada -= cantidad;
+                        if (etiqueta.cant_entregada < 0) etiqueta.cant_entregada = 0;
+                        actualizarTablaEtiquetas();
+                    }
+                } else {
+                    mostrarMensaje('error', 'Error al registrar la devolución');
+                }
+            })
+            .catch(error => {
+                console.error('Error registrando devolución:', error);
+                mostrarMensaje('error', 'Error al registrar la devolución');
+            });
         }
 
         // Actualizar resumen general del proyecto

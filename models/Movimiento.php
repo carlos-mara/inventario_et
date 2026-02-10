@@ -109,11 +109,12 @@ class Movimiento {
 
     public function obtenerMovimientos() {
         try {
-            $sql = "SELECT movimientos_inventario.*, usuarios.username AS usuario_nombre, etiquetas.nombre AS etiqueta_nombre,
+            $sql = "SELECT movimientos_inventario.*, pro.nombre nombre_proyecto, usuarios.username AS usuario_nombre, etiquetas.nombre AS etiqueta_nombre,
             etiquetas.foto_url AS etiqueta_foto
             FROM movimientos_inventario
             JOIN etiquetas ON movimientos_inventario.etiqueta_id = etiquetas.id
             JOIN usuarios ON movimientos_inventario.usuario_id = usuarios.id
+            LEFT JOIN proyectos pro ON pro.id = movimientos_inventario.id_proyecto
             WHERE movimientos_inventario.activo = 1
             ORDER BY fecha_movimiento DESC";
             $resultado = $this->conexion->ejecutar($sql);
@@ -253,7 +254,7 @@ class Movimiento {
                 LEFT JOIN etiquetas e ON m.etiqueta_id = e.id
                 LEFT JOIN categorias c ON e.categoria_id = c.id
                 LEFT JOIN usuarios u ON m.usuario_id = u.id
-                LEFT JOIN proyectos p ON m.cod_proyecto = p.codigo
+                LEFT JOIN proyectos p ON m.id_proyecto = p.id
                 WHERE 1=1";
         
         $params = [];

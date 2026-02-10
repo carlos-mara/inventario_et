@@ -499,11 +499,11 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                                         <!-- Items Agregados -->
                                         <div id="itemsContainer" class="items-list">
                                             <!-- Item 1 (por defecto) -->
-                                            <div class="item-card mb-3" data-item-index="1">
+                                            <div class="item-card border border-2 border-secondary shadow-lg mb-3" data-item-index="1">
                                                 <div class="item-header bg-light p-2 rounded-top d-flex justify-content-between align-items-center">
                                                     <span class="fw-bold">Item #1</span>
                                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarItem(1)" data-item-count="1">
-                                                        <i class="fas fa-times"></i>
+                                                        <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
                                                 <div class="item-body p-3 border border-top-0 rounded-bottom">
@@ -1569,11 +1569,11 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
         const itemsContainer = document.getElementById('itemsContainer');
         
         const nuevoItemHTML = `
-            <div class="item-card mb-3" data-item-index="${itemCounter}">
+            <div class="item-card border border-2 border-secondary shadow-lg mb-3" data-item-index="${itemCounter}">
                 <div class="item-header bg-light p-2 rounded-top d-flex justify-content-between align-items-center">
                     <span class="fw-bold">Item #${itemCounter}</span>
                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="mostrarConfirmacionEliminarItem(${itemCounter})" data-item-count="${itemCounter}">
-                        <i class="fas fa-times"></i>
+                        <i class="fas fa-trash"></i>
                     </button>
                 </div>
                 <div class="item-body p-3 border border-top-0 rounded-bottom">
@@ -1668,11 +1668,21 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     // Eliminar item (múltiple)
     function eliminarItem(itemIndex) {
         const item = document.querySelector(`.item-card[data-item-index="${itemIndex}"]`);
+        console.log(item);
+        
         if (item) {
             item.remove();
             actualizarResumenMultiple();
-            
+
             const items = document.querySelectorAll('.item-card');
+            items.forEach((item, index) => {
+                const newIndex = index + 1;
+                item.dataset.itemIndex = newIndex;
+                item.querySelector('.item-header .fw-bold').textContent = `Item #${newIndex}`;
+
+                
+            });
+            /* const items = document.querySelectorAll('.item-card');
             items.forEach((item, index) => {
                 const newIndex = index + 1;
                 item.dataset.itemIndex = newIndex;
@@ -1720,7 +1730,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
                 });
             });
             
-            itemCounter = items.length;
+            itemCounter = items.length; */
         }
     }
 
@@ -2406,6 +2416,16 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             });
             
             if (!confirmacion.isConfirmed) return;
+            /* abrir mensaje de cargando */
+            Swal.fire({
+                title: 'Cargando...',
+                text: 'Por favor espera',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
             
             const formData = new FormData();
             formData.append('peticion', 'registrar_salidas_multiples');
@@ -2425,7 +2445,7 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
             });
             
             const result = await response.json();
-            
+            Swal.close();
             if (result.exito) {
                 await mostrarMensaje('success', `${itemsData.length} salidas registradas exitosamente`);
                 
