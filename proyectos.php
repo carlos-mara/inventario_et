@@ -6,13 +6,15 @@ if (!isset($_SESSION['usuario']) && isset($_POST['token'])) {
     require_once 'AuthMiddleware.php';
     $auth = new AuthMiddleware();
     $usuario = $auth->crearSesionDesdeToken($_POST['token']);
-    
+
     if ($usuario) {
         $_SESSION['usuario'] = $usuario;
     }
-}elseif($_SESSION['usuario']['rol'] == "admin" || $_SESSION['usuario']['rol'] == "proyectos"){
+}
+elseif ($_SESSION['usuario']['rol'] == "admin" || $_SESSION['usuario']['rol'] == "proyectos") {
     $tieneAcceso = true;
-}else {
+}
+else {
     echo "<h1>Acceso denegado</h1>";
     echo '<a href="dashboard.php">Volver</a>';
     exit;
@@ -1509,17 +1511,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>
                         <button class="btn btn-sm btn-outline-primary" onclick="verDetalleProyecto(${proyecto.id})"><i class="fas fa-eye"></i></button>
                         <a href="./editar-proyecto.php?id=${proyecto.id}" class="btn btn-sm btn-outline-success"><i class="fas fa-edit"></i></a>
-                        <?php if($_SESSION['usuario']['rol']=='admin'): ?>
+                        <?php if ($_SESSION['usuario']['rol'] == 'admin'): ?>
                             ${ proyecto.estado != 3 ? `
                                 <button class="btn btn-sm btn-outline-danger" onclick="eliminarProyecto(${proyecto.id})"><i class="fas fa-trash"></i></button>`
                                 : ''
                             }
-                        <?php endif;?>
+                        <?php
+endif; ?>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
+
+        let proyectoActivoGlobal = null;
+        let etiquetasPendientesGlobal = [];
 
         // Ver detalles del proyecto
         async function verDetalleProyecto(id) {
@@ -1538,7 +1544,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (result.exito) {
                     const proyecto = result.proyecto[0];
+                    proyectoActivoGlobal = proyecto;
                     const etiquetas = result.etiquetas || [];
+                    etiquetasPendientesGlobal = etiquetas.filter(e => (e.cantidad - e.cantidad_entregada) > 0);
+                    
                     const firmas = result.firmas || [];
                     const modalBody = document.getElementById('detalleProyectoBody');
                     
@@ -1673,11 +1682,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${proyecto.estado == 1 ? `
                         <div class="row text-center mt-4">
                             <div class="col-12">
-                            <?php if ($_SESSION['usuario']['rol'] == "admin" ):?>
+                                <button class="btn btn-success me-2" onclick="entregarTodasEtiquetas()">
+                                    <i class="fas fa-box-open me-2"></i>Entregar todas las etiquetas
+                                </button>
+                            <?php if ($_SESSION['usuario']['rol'] == "admin"): ?>
                                 <button class="btn btn-primary" onclick="abrirModalFirma(${proyecto.id})">
                                     <i class="fas fa-signature me-2"></i>Finalizar proyecto con firma
                                 </button>
-                            <?php endif;?>
+                            <?php
+endif; ?>
                             </div>
                         </div>` : ''}
                     `;
@@ -1688,6 +1701,88 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Error cargando detalles:', error);
                 mostrarMensaje('error', 'Error al cargar los detalles del proyecto');
+            }
+        }
+
+        async function entregarTodasEtiquetas() {
+            if (!etiquetasPendientesGlobal || etiquetasPendientesGlobal.length === 0) {
+                mostrarMensaje('info', 'No hay etiquetas pendientes por entregar en este proyecto.');
+                return;
+            }
+
+            const confirmResult = await Swal.fire({
+                title: '¿Entregar todas las etiquetas faltantes?',
+                text: "Se registrarán movimientos de salida para todas las etiquetas que aún no se han entregado por completo.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, entregar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!confirmResult.isConfirmed) return;
+
+            // Preparar items
+            const items = etiquetasPendientesGlobal.map(e => ({
+                etiqueta_id: e.etiqueta_id || e.id_etiqueta,
+                cantidad: e.cantidad - e.cantidad_entregada,
+                alto: e.alto,
+                ancho: e.ancho,
+                tamano_id: e.tamano_id,
+                id_etiqueta_proyecto: e.id
+            }));
+
+            const formData = new FormData();
+            formData.append('peticion', 'registrar_salidas_multiples');
+            formData.append('token', authToken);
+            formData.append('proyecto_id', proyectoActivoGlobal.id);
+            formData.append('items', JSON.stringify(items));
+            formData.append('motivo', 'Entrega total al finalizar proyecto');
+            
+            // Si el user object tiene id, lo enviamos
+            if(userData && userData.id) {
+                formData.append('usuario_id', userData.id);
+            }
+
+            Swal.fire({
+                title: 'Procesando...',
+                text: 'Registrando salidas...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            try {
+                const response = await fetch('controllers/movimientos.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                Swal.close();
+                
+                if (result.exito) {
+                    mostrarMensaje('success', 'Etiquetas entregadas correctamente');
+                    // Recargar detalles y tabla
+                    verDetalleProyecto(proyectoActivoGlobal.id);
+                    cargarProyectos();
+                } else {
+                    // Quizás algún movimiento falló por stock
+                    let msj = result.msj || 'Error registrando salidas';
+                    if (result.resultados) {
+                        const fallidos = result.resultados.filter(r => !r.resultado.exito);
+                        if (fallidos.length > 0) {
+                            msj = fallidos[0].resultado.msj || msj;
+                        }
+                    }
+                    throw new Error(msj);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.close();
+                mostrarMensaje('error', error.message || 'Error al procesar la entrega');
             }
         }
 
